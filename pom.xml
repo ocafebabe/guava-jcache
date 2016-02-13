@@ -25,6 +25,14 @@
         </license>
     </licenses>
 
+    <developers>
+        <developer>
+            <id>ocafebabe</id>
+            <name>Christian Bourque</name>
+            <email>ocafebabe@exprofesso.ca</email>
+        </developer>
+    </developers>
+
     <dependencies>
 
         <dependency>
