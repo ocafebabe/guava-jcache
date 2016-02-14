@@ -24,10 +24,13 @@ import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
 import javax.cache.spi.CachingProvider;
 
+import org.bitstrings.test.junit.runner.ClassLoaderPerTestRunner;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(ClassLoaderPerTestRunner.class)
 public class GuavaCacheManagerTest
 {
     private CachingProvider cachingProvider;
