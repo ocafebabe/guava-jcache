@@ -15,14 +15,138 @@
  */
 package ca.exprofesso.guava.jcache;
 
+import static org.junit.Assert.*;
+
+import javax.cache.Cache;
+import javax.cache.CacheManager;
+import javax.cache.Caching;
+import javax.cache.configuration.MutableConfiguration;
+import javax.cache.spi.CachingProvider;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class GuavaCacheTest
 {
+    private CachingProvider cachingProvider;
+
+    @Before
+    public void init()
+    {
+        cachingProvider = Caching.getCachingProvider(GuavaCachingProvider.class.getName());
+
+        assertNotNull(cachingProvider);
+    }
+
+    @After
+    public void close()
+    {
+        cachingProvider.close();
+
+        cachingProvider = null;
+    }
+
     @Test
-    public void test()
+    public void testPutGet()
+    {
+        CacheManager cm = cachingProvider.getCacheManager();
+
+        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
+
+        mc.setStoreByValue(false);
+        mc.setTypes(String.class, Integer.class);
+
+        Cache<String, Integer> c = cm.createCache("cache", mc);
+
+        assertEquals("cache", c.getName());
+
+        c.put("1", 1);
+
+        assertEquals(Integer.valueOf(1), c.get("1"));
+        assertEquals(1, c.unwrap(GuavaCache.class).size());
+    }
+
+    @Test
+    @Ignore
+    public void testMaximumSize()
         throws Exception
     {
+        CacheManager cm = cachingProvider.getCacheManager();
 
+        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
+
+        mc.setStoreByValue(false);
+        mc.setTypes(String.class, Integer.class);
+
+        Cache<String, Integer> c = cm.createCache("cache", mc);
+
+        for (int i = 0; i < 1000; i++)
+        {
+            c.put("k-" + i, i);
+        }
+
+        for (int i = 0; i < 1000; i++)
+        {
+            assertEquals(new Integer(i), c.get("k-" + i));
+        }
+
+        assertEquals(1000, c.unwrap(GuavaCache.class).size());
+    }
+
+    @Test
+    public void testPutIfAbsent()
+    {
+        CacheManager cm = cachingProvider.getCacheManager();
+
+        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
+
+        mc.setStoreByValue(false);
+        mc.setTypes(String.class, Integer.class);
+
+        Cache<String, Integer> c = cm.createCache("cache", mc);
+
+        assertEquals("cache", c.getName());
+
+        assertTrue(c.putIfAbsent("key", Integer.MIN_VALUE));
+        assertFalse(c.putIfAbsent("key", Integer.MIN_VALUE));
+    }
+
+    @Test
+    public void testRemoveAll()
+    {
+        CacheManager cm = cachingProvider.getCacheManager();
+
+        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
+
+        mc.setStoreByValue(false);
+        mc.setTypes(String.class, Integer.class);
+
+        Cache<String, Integer> c = cm.createCache("cache", mc);
+
+        c.put("1", 1);
+
+        c.removeAll();
+
+        assertNull(c.get("1"));
+        assertEquals(0, c.unwrap(GuavaCache.class).size());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testClosedCache()
+    {
+        CacheManager cm = cachingProvider.getCacheManager();
+
+        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
+
+        mc.setStoreByValue(false);
+        mc.setTypes(String.class, Integer.class);
+
+        Cache<String, Integer> c = cm.createCache("cache", mc);
+
+        c.close();
+
+        c.get("test");
     }
 }
