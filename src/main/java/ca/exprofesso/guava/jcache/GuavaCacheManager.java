@@ -74,6 +74,8 @@ public class GuavaCacheManager
     public <K, V, C extends Configuration<K, V>> Cache<K, V> createCache(String cacheName, C configuration)
         throws IllegalArgumentException
     {
+        checkState();
+
         if (cacheName == null || configuration == null)
         {
             throw new NullPointerException();
@@ -86,8 +88,6 @@ public class GuavaCacheManager
         {
             throw new IllegalArgumentException("Invalid configuration implementation!");
         }
-
-        checkState();
 
         MutableConfiguration<K, V> mc = (MutableConfiguration) configuration;
 
@@ -121,7 +121,7 @@ public class GuavaCacheManager
     public Iterable<String> getCacheNames()
     {
         checkState();
-        
+
         return caches.keySet();
     }
 

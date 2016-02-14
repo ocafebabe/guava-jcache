@@ -25,7 +25,6 @@ import javax.cache.spi.CachingProvider;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class GuavaCacheTest
@@ -69,33 +68,6 @@ public class GuavaCacheTest
     }
 
     @Test
-    @Ignore
-    public void testMaximumSize()
-        throws Exception
-    {
-        CacheManager cm = cachingProvider.getCacheManager();
-
-        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
-
-        mc.setStoreByValue(false);
-        mc.setTypes(String.class, Integer.class);
-
-        Cache<String, Integer> c = cm.createCache("cache", mc);
-
-        for (int i = 0; i < 1000; i++)
-        {
-            c.put("k-" + i, i);
-        }
-
-        for (int i = 0; i < 1000; i++)
-        {
-            assertEquals(new Integer(i), c.get("k-" + i));
-        }
-
-        assertEquals(1000, c.unwrap(GuavaCache.class).size());
-    }
-
-    @Test
     public void testPutIfAbsent()
     {
         CacheManager cm = cachingProvider.getCacheManager();
@@ -111,6 +83,26 @@ public class GuavaCacheTest
 
         assertTrue(c.putIfAbsent("key", Integer.MIN_VALUE));
         assertFalse(c.putIfAbsent("key", Integer.MIN_VALUE));
+    }
+
+    @Test
+    public void testClear()
+    {
+        CacheManager cm = cachingProvider.getCacheManager();
+
+        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
+
+        mc.setStoreByValue(false);
+        mc.setTypes(String.class, Integer.class);
+
+        Cache<String, Integer> c = cm.createCache("cache", mc);
+
+        c.put("1", 1);
+
+        c.clear();
+
+        assertNull(c.get("1"));
+        assertEquals(0, c.unwrap(GuavaCache.class).size());
     }
 
     @Test

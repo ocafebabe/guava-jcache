@@ -59,9 +59,7 @@ public class GuavaCache<K, V>
 
         CacheBuilder cacheBuilder = CacheBuilder.from(cacheBuilderSpec);
 
-        ///this.cache = (Cache<K, V>) cacheBuilder.build();
-
-        this.cache = (Cache<K, V>) CacheBuilder.newBuilder().maximumSize(1000).build();
+        this.cache = (Cache<K, V>) cacheBuilder.build();
 
         this.view = cache.asMap();
     }
@@ -361,9 +359,9 @@ public class GuavaCache<K, V>
         return list.iterator();
     }
 
-    public int size()
+    public long size()
     {
-        return view.size();
+        return cache.size();
     }
 
     private void checkState()
