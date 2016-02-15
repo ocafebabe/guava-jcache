@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
+import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
-import javax.cache.configuration.MutableConfiguration;
 import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
@@ -39,7 +39,7 @@ public class GuavaCache<K, V>
     implements javax.cache.Cache<K, V>
 {
     private final String cacheName;
-    private final MutableConfiguration<K, V> configuration;
+    private final CompleteConfiguration<K, V> configuration;
     private final CacheManager cacheManager;
 
     private final Cache<K, V> cache;
@@ -47,7 +47,7 @@ public class GuavaCache<K, V>
 
     private boolean closed = false;
 
-    public GuavaCache(String cacheName, MutableConfiguration<K, V> configuration, CacheManager cacheManager)
+    public GuavaCache(String cacheName, CompleteConfiguration<K, V> configuration, CacheManager cacheManager)
     {
         this.cacheName = cacheName;
         this.configuration = configuration;

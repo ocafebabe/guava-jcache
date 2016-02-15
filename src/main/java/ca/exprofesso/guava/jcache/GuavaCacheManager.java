@@ -22,8 +22,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
+import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
-import javax.cache.configuration.MutableConfiguration;
 import javax.cache.spi.CachingProvider;
 
 public class GuavaCacheManager
@@ -84,14 +84,14 @@ public class GuavaCacheManager
         {
             throw new CacheException("This cache already exists!");
         }
-        else if (!(configuration instanceof MutableConfiguration))
+        else if (!(configuration instanceof CompleteConfiguration))
         {
             throw new IllegalArgumentException("Invalid configuration implementation!");
         }
 
-        MutableConfiguration<K, V> mc = (MutableConfiguration) configuration;
+        CompleteConfiguration<K, V> cc = (CompleteConfiguration) configuration;
 
-        Cache<K, V> newCache = new GuavaCache<>(cacheName, mc, this);
+        Cache<K, V> newCache = new GuavaCache<>(cacheName, cc, this);
 
         Cache<K, V> oldCache = (Cache<K, V>) caches.putIfAbsent(cacheName, newCache);
 
@@ -106,15 +106,30 @@ public class GuavaCacheManager
     @Override
     public <K, V> Cache<K, V> getCache(String cacheName, Class<K> keyType, Class<V> valueType)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        checkState();
+
+        if (cacheName != null && caches.containsKey(cacheName))
+        {
+            Cache<?, ?> cache = caches.get(cacheName);
+
+            CompleteConfiguration<?, ?> configuration = cache.getConfiguration(CompleteConfiguration.class);
+
+            if (configuration.getKeyType().isAssignableFrom(keyType)
+                && configuration.getValueType().isAssignableFrom(valueType))
+            {
+                return (Cache<K, V>) cache;
+            }
+
+            throw new IllegalArgumentException("Provided key and/or value types are incompatible with this cache!");
+        }
+
+        return null;
     }
 
     @Override
     public <K, V> Cache<K, V> getCache(String cacheName)
     {
-        checkState();
-
-        return (Cache<K, V>) caches.get(cacheName);
+        return (Cache<K, V>) getCache(cacheName, Object.class, Object.class);
     }
 
     @Override

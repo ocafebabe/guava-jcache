@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 import java.util.Properties;
 
+import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
@@ -159,5 +160,37 @@ public class GuavaCacheManagerTest
         cacheManager.close();
 
         cacheManager.getCacheNames();
+    }
+
+    @Test
+    public void testGetCacheWithTypes()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
+
+        configuration.setTypes(Number.class, Number.class);
+
+        cacheManager.createCache("cache", configuration);
+
+        Cache<Integer, Long> cache = cacheManager.getCache("cache", Integer.class, Long.class);
+
+        assertNotNull(cache);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testGetCacheWithInvalidTypes()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
+
+        configuration.setTypes(Number.class, Number.class);
+
+        cacheManager.createCache("cache", configuration);
+
+        Cache<String, String> cache = cacheManager.getCache("cache", String.class, String.class);
+
+        assertNotNull(cache);
     }
 }
