@@ -17,6 +17,12 @@ package ca.exprofesso.guava.jcache;
 
 import static org.junit.Assert.*;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
 import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
@@ -31,12 +37,29 @@ public class GuavaCacheTest
 {
     private CachingProvider cachingProvider;
 
+    private CacheManager cacheManager;
+
+    private Cache<String, Integer> cache;
+
+    private final MutableConfiguration<String, Integer> configuration = new MutableConfiguration<>();
+
     @Before
     public void init()
     {
         cachingProvider = Caching.getCachingProvider(GuavaCachingProvider.class.getName());
-
         assertNotNull(cachingProvider);
+
+        cacheManager = cachingProvider.getCacheManager();
+        assertNotNull(cacheManager);
+
+        configuration.setStoreByValue(false);
+        configuration.setTypes(String.class, Integer.class);
+
+        cache = cacheManager.createCache("cache", configuration);
+        assertNotNull(cache);
+        assertEquals("cache", cache.getName());
+        assertEquals(cacheManager, cache.getCacheManager());
+        assertEquals(configuration, cache.getConfiguration(MutableConfiguration.class));
     }
 
     @After
@@ -44,101 +67,205 @@ public class GuavaCacheTest
     {
         cachingProvider.close();
 
+        assertTrue(cacheManager.isClosed());
+        assertTrue(cache.isClosed());
+
         cachingProvider = null;
     }
 
     @Test
     public void testPutGet()
     {
-        CacheManager cm = cachingProvider.getCacheManager();
+        cache.put("1", 1);
 
-        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
+        assertEquals(Integer.valueOf(1), cache.get("1"));
+        assertEquals(1, cache.unwrap(GuavaCache.class).size());
+    }
 
-        mc.setStoreByValue(false);
-        mc.setTypes(String.class, Integer.class);
+    @Test
+    public void testPutAllGetAll()
+    {
+        Map<String, Integer> map = new HashMap<>();
 
-        Cache<String, Integer> c = cm.createCache("cache", mc);
+        map.put("key1", 1);
+        map.put("key2", 2);
+        map.put("key3", 3);
 
-        assertEquals("cache", c.getName());
+        cache.putAll(map);
 
-        c.put("1", 1);
+        Map<String, Integer> map2 = cache.getAll(map.keySet());
 
-        assertEquals(Integer.valueOf(1), c.get("1"));
-        assertEquals(1, c.unwrap(GuavaCache.class).size());
+        assertEquals(map, map2);
+    }
+
+    @Test
+    public void testContainsKey()
+    {
+        cache.put("1", 1);
+
+        assertTrue(cache.containsKey("1"));
+        assertFalse(cache.containsKey("2"));
     }
 
     @Test
     public void testPutIfAbsent()
     {
-        CacheManager cm = cachingProvider.getCacheManager();
+        assertTrue(cache.putIfAbsent("key", Integer.MIN_VALUE));
+        assertFalse(cache.putIfAbsent("key", Integer.MIN_VALUE));
+    }
 
-        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
-
-        mc.setStoreByValue(false);
-        mc.setTypes(String.class, Integer.class);
-
-        Cache<String, Integer> c = cm.createCache("cache", mc);
-
-        assertEquals("cache", c.getName());
-
-        assertTrue(c.putIfAbsent("key", Integer.MIN_VALUE));
-        assertFalse(c.putIfAbsent("key", Integer.MIN_VALUE));
+    @Test
+    public void testGetAndPut()
+    {
+        assertNull(cache.getAndPut("key", Integer.MIN_VALUE));
+        assertEquals(Integer.valueOf(Integer.MIN_VALUE), cache.getAndPut("key", Integer.MAX_VALUE));
     }
 
     @Test
     public void testClear()
     {
-        CacheManager cm = cachingProvider.getCacheManager();
+        cache.put("1", 1);
 
-        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
+        cache.clear();
 
-        mc.setStoreByValue(false);
-        mc.setTypes(String.class, Integer.class);
+        assertNull(cache.get("1"));
+        assertEquals(0, cache.unwrap(GuavaCache.class).size());
+    }
 
-        Cache<String, Integer> c = cm.createCache("cache", mc);
+    @Test
+    public void testRemove()
+    {
+        cache.put("1", 1);
+        cache.put("2", 2);
+        cache.put("3", 3);
 
-        c.put("1", 1);
+        cache.remove("2");
 
-        c.clear();
+        assertNotNull(cache.get("1"));
+        assertNull(cache.get("2"));
+        assertNotNull(cache.get("3"));
+        assertEquals(2, cache.unwrap(GuavaCache.class).size());
+    }
 
-        assertNull(c.get("1"));
-        assertEquals(0, c.unwrap(GuavaCache.class).size());
+    @Test
+    public void testRemoveWithValue()
+    {
+        cache.put("1", 1);
+
+        assertFalse(cache.remove("1", 0));
+        assertTrue(cache.remove("1", 1));
+        assertEquals(0, cache.unwrap(GuavaCache.class).size());
+    }
+
+    @Test
+    public void testGetAndRemove()
+    {
+        cache.put("1", 1);
+
+        assertEquals(Integer.valueOf(1), cache.getAndRemove("1"));
+        assertFalse(cache.containsKey("1"));
+        assertEquals(0, cache.unwrap(GuavaCache.class).size());
+    }
+
+    @Test
+    public void testGetAndReplace()
+    {
+        assertNull(cache.getAndReplace("1", 1));
+
+        cache.put("1", 1);
+
+        assertEquals(Integer.valueOf(1), cache.getAndReplace("1", 2));
+        assertEquals(Integer.valueOf(2), cache.get("1"));
+    }
+
+    @Test
+    public void testReplace()
+    {
+        assertFalse(cache.replace("1", 1));
+
+        cache.put("1", 1);
+
+        assertTrue(cache.replace("1", 2));
+        assertEquals(Integer.valueOf(2), cache.get("1"));
+    }
+
+    @Test
+    public void testReplaceWithValue()
+    {
+        assertFalse(cache.replace("1", 1, 2));
+
+        cache.put("1", 1);
+
+        assertFalse(cache.replace("1", 2, 1));
+        assertTrue(cache.replace("1", 1, 2));
+        assertEquals(Integer.valueOf(2), cache.get("1"));
     }
 
     @Test
     public void testRemoveAll()
     {
-        CacheManager cm = cachingProvider.getCacheManager();
+        cache.put("1", 1);
 
-        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
+        cache.removeAll();
 
-        mc.setStoreByValue(false);
-        mc.setTypes(String.class, Integer.class);
+        assertNull(cache.get("1"));
+        assertEquals(0, cache.unwrap(GuavaCache.class).size());
+    }
 
-        Cache<String, Integer> c = cm.createCache("cache", mc);
+    @Test
+    public void testRemoveAllWithKeys()
+    {
+        cache.put("1", 1);
+        cache.put("2", 2);
+        cache.put("3", 3);
 
-        c.put("1", 1);
+        Set<String> keys = new HashSet<>();
 
-        c.removeAll();
+        keys.add("1");
+        keys.add("3");
 
-        assertNull(c.get("1"));
-        assertEquals(0, c.unwrap(GuavaCache.class).size());
+        cache.removeAll(keys);
+
+        assertNull(cache.get("1"));
+        assertNotNull(cache.get("2"));
+        assertNull(cache.get("3"));
+        assertEquals(1, cache.unwrap(GuavaCache.class).size());
+    }
+
+    @Test
+    public void testIterator()
+    {
+        Map<String, Integer> map = new HashMap<>();
+
+        map.put("1", 1);
+        map.put("2", 2);
+        map.put("3", 3);
+
+        cache.putAll(map);
+
+        Iterator<Cache.Entry<String, Integer>> i = cache.iterator();
+
+        while (i.hasNext())
+        {
+            Cache.Entry<String, Integer> entry = i.next();
+
+            String key = entry.getKey();
+            Integer value = entry.getValue();
+
+            assertNotNull(key);
+            assertNotNull(value);
+
+            assertEquals(value, map.remove(key));
+        }
+
+        assertTrue(map.isEmpty());
     }
 
     @Test(expected = IllegalStateException.class)
     public void testClosedCache()
     {
-        CacheManager cm = cachingProvider.getCacheManager();
+        cache.close();
 
-        MutableConfiguration<String, Integer> mc = new MutableConfiguration<>();
-
-        mc.setStoreByValue(false);
-        mc.setTypes(String.class, Integer.class);
-
-        Cache<String, Integer> c = cm.createCache("cache", mc);
-
-        c.close();
-
-        c.get("test");
+        cache.get("test");
     }
 }
