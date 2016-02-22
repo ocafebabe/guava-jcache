@@ -285,6 +285,47 @@ public class GuavaCacheTest
     }
 
     @Test
+    public void testCacheManagementBean()
+        throws Exception
+    {
+        MutableConfiguration<String, Integer> custom = new MutableConfiguration<>(configuration);
+
+        custom.setManagementEnabled(true);
+
+        Cache<String, Integer> managementCache = cacheManager.createCache("managementCache", custom);
+
+        MBeanServer beanServer = ManagementFactory.getPlatformMBeanServer();
+
+        assertNotNull(beanServer);
+
+        ObjectName name = new ObjectName(GuavaCacheMXBean.getObjectName(managementCache));
+
+        Object keyType = beanServer.getAttribute(name, "KeyType");
+        Object valueType = beanServer.getAttribute(name, "ValueType");
+        Object readThrough = beanServer.getAttribute(name, "ReadThrough");
+        Object writeThrough = beanServer.getAttribute(name, "WriteThrough");
+        Object storeByValue = beanServer.getAttribute(name, "StoreByValue");
+        Object statisticsEnabled = beanServer.getAttribute(name, "StatisticsEnabled");
+        Object managementEnabled = beanServer.getAttribute(name, "ManagementEnabled");
+
+        assertNotNull(keyType);
+        assertNotNull(valueType);
+        assertNotNull(readThrough);
+        assertNotNull(writeThrough);
+        assertNotNull(storeByValue);
+        assertNotNull(statisticsEnabled);
+        assertNotNull(managementEnabled);
+
+        assertEquals("java.lang.String", keyType);
+        assertEquals("java.lang.Integer", valueType);
+        assertFalse((boolean) readThrough);
+        assertFalse((boolean) writeThrough);
+        assertFalse((boolean) storeByValue);
+        assertFalse((boolean) statisticsEnabled);
+        assertTrue((boolean) managementEnabled);
+    }
+
+    @Test
     public void testCacheStatisticsBean()
         throws Exception
     {
@@ -292,22 +333,22 @@ public class GuavaCacheTest
 
         custom.setStatisticsEnabled(true);
 
-        Cache<String, Integer> statsCache = cacheManager.createCache("statsCache", custom);
+        Cache<String, Integer> statisticsCache = cacheManager.createCache("statisticsCache", custom);
 
-        statsCache.put("entry1", 1);
-        statsCache.put("entry2", 2);
-        statsCache.put("entry3", 3);
+        statisticsCache.put("entry1", 1);
+        statisticsCache.put("entry2", 2);
+        statisticsCache.put("entry3", 3);
 
-        statsCache.get("entry1");
-        statsCache.get("entry2");
-        statsCache.get("entry3");
-        statsCache.get("entry4");
-
-        ObjectName name = new ObjectName(GuavaCacheStatisticsMXBean.getObjectName(statsCache));
+        statisticsCache.get("entry1");
+        statisticsCache.get("entry2");
+        statisticsCache.get("entry3");
+        statisticsCache.get("entry4");
 
         MBeanServer beanServer = ManagementFactory.getPlatformMBeanServer();
 
         assertNotNull(beanServer);
+
+        ObjectName name = new ObjectName(GuavaCacheStatisticsMXBean.getObjectName(statisticsCache));
 
         Object cacheHits = beanServer.getAttribute(name, "CacheHits");
         Object cacheMisses = beanServer.getAttribute(name, "CacheMisses");

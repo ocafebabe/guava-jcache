@@ -105,6 +105,20 @@ public class GuavaCache<K, V>
             cacheBuilder = cacheBuilder.removalListener(this);
         }
 
+        if (configuration.isManagementEnabled())
+        {
+            GuavaCacheMXBean bean = new GuavaCacheMXBean(this);
+
+            try
+            {
+                ManagementFactory.getPlatformMBeanServer().registerMBean(bean, new ObjectName(bean.getObjectName()));
+            }
+            catch (OperationsException | MBeanException e)
+            {
+                throw new CacheException(e);
+            }
+        }
+
         if (configuration.isStatisticsEnabled())
         {
             GuavaCacheStatisticsMXBean bean = new GuavaCacheStatisticsMXBean(this);
