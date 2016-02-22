@@ -22,7 +22,13 @@ import java.util.Properties;
 import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
+import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.MutableConfiguration;
+import javax.cache.expiry.AccessedExpiryPolicy;
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ModifiedExpiryPolicy;
+import javax.cache.expiry.TouchedExpiryPolicy;
 import javax.cache.spi.CachingProvider;
 
 import org.bitstrings.test.junit.runner.ClassLoaderPerTestRunner;
@@ -120,7 +126,11 @@ public class GuavaCacheManagerTest
         {
             assertNotNull(cacheManager);
 
-            cacheManager.createCache("test", new MutableConfiguration());
+            MutableConfiguration configuration = new MutableConfiguration();
+
+            configuration.setStoreByValue(false);
+
+            cacheManager.createCache("test", configuration);
         }
     }
 
@@ -169,6 +179,7 @@ public class GuavaCacheManagerTest
 
         MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
 
+        configuration.setStoreByValue(false);
         configuration.setTypes(Number.class, Number.class);
 
         cacheManager.createCache("cache", configuration);
@@ -185,6 +196,7 @@ public class GuavaCacheManagerTest
 
         MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
 
+        configuration.setStoreByValue(false);
         configuration.setTypes(Number.class, Number.class);
 
         cacheManager.createCache("cache", configuration);
@@ -192,5 +204,105 @@ public class GuavaCacheManagerTest
         Cache<String, String> cache = cacheManager.getCache("cache", String.class, String.class);
 
         assertNotNull(cache);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testCreateStoryByValueCache()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
+
+        configuration.setStoreByValue(true);
+
+        cacheManager.createCache("cache", configuration);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testCreateReadThroughCacheWithInvalidConfiguration()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
+
+        configuration.setStoreByValue(false);
+        configuration.setReadThrough(true);
+
+        cacheManager.createCache("cache", configuration);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testCreateWriteThroughCacheWithInvalidConfiguration()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
+
+        configuration.setStoreByValue(false);
+        configuration.setWriteThrough(true);
+
+        cacheManager.createCache("cache", configuration);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testCreateCacheWithUnsupportedAccessedExpiryPolicy()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
+
+        configuration.setStoreByValue(false);
+        configuration.setExpiryPolicyFactory(AccessedExpiryPolicy.factoryOf(Duration.ZERO));
+
+        cacheManager.createCache("cache", configuration);
+    }
+
+    @Test(expected = UnsupportedOperationException.class)
+    public void testCreateCacheWithUnsupportedCreatedExpiryPolicy()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
+
+        configuration.setStoreByValue(false);
+        configuration.setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(Duration.ZERO));
+
+        cacheManager.createCache("cache", configuration);
+    }
+
+    @Test
+    public void testCreateCacheWithModifiedExpiryPolicy()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
+
+        configuration.setStoreByValue(false);
+        configuration.setExpiryPolicyFactory(ModifiedExpiryPolicy.factoryOf(Duration.ONE_DAY));
+
+        Cache cache = cacheManager.createCache("cache", configuration);
+
+        CompleteConfiguration actualConfiguration =
+            (CompleteConfiguration) cache.getConfiguration(CompleteConfiguration.class);
+
+        assertEquals(ModifiedExpiryPolicy.factoryOf(Duration.ONE_DAY), actualConfiguration.getExpiryPolicyFactory());
+    }
+
+    @Test
+    public void testCreateCacheWithTouchedExpiryPolicy()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration<Number, Number> configuration = new MutableConfiguration<>();
+
+        configuration.setStoreByValue(false);
+        configuration.setExpiryPolicyFactory(TouchedExpiryPolicy.factoryOf(Duration.ONE_MINUTE));
+
+        Cache cache = cacheManager.createCache("cache", configuration);
+
+        CompleteConfiguration actualConfiguration =
+            (CompleteConfiguration) cache.getConfiguration(CompleteConfiguration.class);
+
+        assertEquals(TouchedExpiryPolicy.factoryOf(Duration.ONE_MINUTE), actualConfiguration.getExpiryPolicyFactory());
     }
 }

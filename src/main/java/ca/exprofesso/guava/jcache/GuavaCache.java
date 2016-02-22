@@ -26,6 +26,10 @@ import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.expiry.ModifiedExpiryPolicy;
+import javax.cache.expiry.TouchedExpiryPolicy;
 import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
@@ -58,6 +62,21 @@ public class GuavaCache<K, V>
         CacheBuilderSpec cacheBuilderSpec = CacheBuilderSpec.parse(properties.substring(1, properties.length() - 1));
 
         CacheBuilder cacheBuilder = CacheBuilder.from(cacheBuilderSpec);
+
+        ExpiryPolicy expiryPolicy = configuration.getExpiryPolicyFactory().create();
+
+        if (expiryPolicy instanceof ModifiedExpiryPolicy) // == Guava expire after write
+        {
+            Duration d = expiryPolicy.getExpiryForUpdate();
+
+            cacheBuilder.expireAfterWrite(d.getDurationAmount(), d.getTimeUnit());
+        }
+        else if (expiryPolicy instanceof TouchedExpiryPolicy) // == Guava expire after access
+        {
+            Duration d = expiryPolicy.getExpiryForAccess();
+
+            cacheBuilder.expireAfterAccess(d.getDurationAmount(), d.getTimeUnit());
+        }
 
         this.cache = (Cache<K, V>) cacheBuilder.build();
 

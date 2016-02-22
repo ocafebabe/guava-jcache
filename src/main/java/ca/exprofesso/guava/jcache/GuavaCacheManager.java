@@ -24,6 +24,10 @@ import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.expiry.EternalExpiryPolicy;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.expiry.ModifiedExpiryPolicy;
+import javax.cache.expiry.TouchedExpiryPolicy;
 import javax.cache.spi.CachingProvider;
 
 public class GuavaCacheManager
@@ -89,9 +93,11 @@ public class GuavaCacheManager
             throw new IllegalArgumentException("Invalid configuration implementation!");
         }
 
-        CompleteConfiguration<K, V> cc = (CompleteConfiguration) configuration;
+        CompleteConfiguration<K, V> completeConfiguration = (CompleteConfiguration) configuration;
 
-        Cache<K, V> newCache = new GuavaCache<>(cacheName, cc, this);
+        validateConfiguration(completeConfiguration);
+
+        Cache<K, V> newCache = new GuavaCache<>(cacheName, completeConfiguration, this);
 
         Cache<K, V> oldCache = (Cache<K, V>) caches.putIfAbsent(cacheName, newCache);
 
@@ -202,6 +208,38 @@ public class GuavaCacheManager
         if (isClosed())
         {
             throw new IllegalStateException("This cache manager is closed!");
+        }
+    }
+
+    private void validateConfiguration(CompleteConfiguration<?, ?> configuration)
+    {
+        if (configuration.isStoreByValue())
+        {
+            throw new UnsupportedOperationException("Store by value is not supported in Guava!");
+        }
+
+        if (configuration.getExpiryPolicyFactory() == null)
+        {
+            throw new NullPointerException("Expiry policy factory cannot be null!");
+        }
+
+        ExpiryPolicy expiryPolicy = configuration.getExpiryPolicyFactory().create();
+
+        if (!(expiryPolicy instanceof EternalExpiryPolicy)
+            && !(expiryPolicy instanceof ModifiedExpiryPolicy)
+            && !(expiryPolicy instanceof TouchedExpiryPolicy))
+        {
+            throw new UnsupportedOperationException("Invalid expiry policy configuration!");
+        }
+
+        if (configuration.isReadThrough() && configuration.getCacheLoaderFactory() == null)
+        {
+            throw new IllegalArgumentException("Invalid read through cache configuration!");
+        }
+
+        if (configuration.isWriteThrough() || configuration.getCacheWriterFactory() != null)
+        {
+            throw new UnsupportedOperationException("Invalid write through cache configuration!");
         }
     }
 }
