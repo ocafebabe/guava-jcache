@@ -16,13 +16,12 @@
 package ca.exprofesso.guava.jcache;
 
 import javax.cache.Cache;
-import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.EventType;
 
 import com.google.common.cache.RemovalNotification;
 
 public class GuavaCacheEntryEvent<K, V>
-    extends CacheEntryEvent<K, V>
+    extends javax.cache.event.CacheEntryEvent<K, V>
 {
     private final RemovalNotification<K, V> notification;
 

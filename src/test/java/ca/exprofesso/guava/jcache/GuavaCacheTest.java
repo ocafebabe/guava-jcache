@@ -17,6 +17,7 @@ package ca.exprofesso.guava.jcache;
 
 import static org.junit.Assert.*;
 
+import java.lang.management.ManagementFactory;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -40,6 +41,8 @@ import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.spi.CachingProvider;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 import org.junit.After;
 import org.junit.Before;
@@ -279,6 +282,59 @@ public class GuavaCacheTest
         cache.close();
 
         cache.get("test");
+    }
+
+    @Test
+    public void testCacheStatisticsBean()
+        throws Exception
+    {
+        MutableConfiguration<String, Integer> custom = new MutableConfiguration<>(configuration);
+
+        custom.setStatisticsEnabled(true);
+
+        Cache<String, Integer> statsCache = cacheManager.createCache("statsCache", custom);
+
+        statsCache.put("entry1", 1);
+        statsCache.put("entry2", 2);
+        statsCache.put("entry3", 3);
+
+        statsCache.get("entry1");
+        statsCache.get("entry2");
+        statsCache.get("entry3");
+        statsCache.get("entry4");
+
+        ObjectName name = new ObjectName(GuavaCacheStatisticsMXBean.getObjectName(statsCache));
+
+        MBeanServer beanServer = ManagementFactory.getPlatformMBeanServer();
+
+        assertNotNull(beanServer);
+
+        Object cacheHits = beanServer.getAttribute(name, "CacheHits");
+        Object cacheMisses = beanServer.getAttribute(name, "CacheMisses");
+        Object cacheHitPercentage = beanServer.getAttribute(name, "CacheHitPercentage");
+        Object cacheMissPercentage = beanServer.getAttribute(name, "CacheMissPercentage");
+
+        assertNotNull(cacheHits);
+        assertNotNull(cacheMisses);
+        assertNotNull(cacheHitPercentage);
+        assertNotNull(cacheMissPercentage);
+
+        assertEquals("cache hits", 3L, cacheHits);
+        assertEquals("cache misses", 1L, cacheMisses);
+        assertEquals("cache hit percentage", 0.75F, cacheHitPercentage);
+        assertEquals("cache miss percentage", 0.25F, cacheMissPercentage);
+
+        beanServer.invoke(name, "clear", null, null);
+
+        cacheHits = beanServer.getAttribute(name, "CacheHits");
+        cacheMisses = beanServer.getAttribute(name, "CacheMisses");
+        cacheHitPercentage = beanServer.getAttribute(name, "CacheHitPercentage");
+        cacheMissPercentage = beanServer.getAttribute(name, "CacheMissPercentage");
+
+        assertEquals("cache hits", 0L, cacheHits);
+        assertEquals("cache misses", 0L, cacheMisses);
+        assertEquals("cache hit percentage", 1F, cacheHitPercentage);
+        assertEquals("cache miss percentage", 0F, cacheMissPercentage);
     }
 
     @Test

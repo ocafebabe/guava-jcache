@@ -15,6 +15,7 @@
  */
 package ca.exprofesso.guava.jcache;
 
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.CompleteConfiguration;
@@ -43,10 +45,14 @@ import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.EntryProcessorResult;
+import javax.management.MBeanException;
+import javax.management.ObjectName;
+import javax.management.OperationsException;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheBuilderSpec;
+import com.google.common.cache.CacheStats;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.Sets;
@@ -97,6 +103,22 @@ public class GuavaCache<K, V>
         if (!this.cacheEntryListenerConfigurations.isEmpty())
         {
             cacheBuilder = cacheBuilder.removalListener(this);
+        }
+
+        if (configuration.isStatisticsEnabled())
+        {
+            GuavaCacheStatisticsMXBean bean = new GuavaCacheStatisticsMXBean(this);
+
+            try
+            {
+                ManagementFactory.getPlatformMBeanServer().registerMBean(bean, new ObjectName(bean.getObjectName()));
+            }
+            catch (OperationsException | MBeanException e)
+            {
+                throw new CacheException(e);
+            }
+
+            cacheBuilder.recordStats();
         }
 
         this.cache = (Cache<K, V>) cacheBuilder.build();
@@ -426,6 +448,11 @@ public class GuavaCache<K, V>
     public long size()
     {
         return cache.size();
+    }
+
+    public CacheStats stats()
+    {
+        return cache.stats();
     }
 
     private void checkState()
