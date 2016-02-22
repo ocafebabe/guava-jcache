@@ -22,11 +22,23 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
+import javax.cache.configuration.CacheEntryListenerConfiguration;
+import javax.cache.configuration.Factory;
 import javax.cache.configuration.MutableConfiguration;
+import javax.cache.event.CacheEntryEvent;
+import javax.cache.event.CacheEntryEventFilter;
+import javax.cache.event.CacheEntryExpiredListener;
+import javax.cache.event.CacheEntryListener;
+import javax.cache.event.CacheEntryListenerException;
+import javax.cache.event.CacheEntryRemovedListener;
+import javax.cache.event.CacheEntryUpdatedListener;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.spi.CachingProvider;
 
 import org.junit.After;
@@ -267,5 +279,154 @@ public class GuavaCacheTest
         cache.close();
 
         cache.get("test");
+    }
+
+    @Test
+    public void testCacheEntryListener()
+        throws InterruptedException
+    {
+        final MyCacheEntryListener myCacheEntryListener = new MyCacheEntryListener();
+        final MyCacheEntryEventFilter myCacheEntryEventFilter = new MyCacheEntryEventFilter();
+
+        CacheEntryListenerConfiguration<String, Integer> listener =
+            new CacheEntryListenerConfiguration<String, Integer>()
+        {
+            @Override
+            public Factory<CacheEntryListener<? super String, ? super Integer>> getCacheEntryListenerFactory()
+            {
+                return new Factory<CacheEntryListener<? super String, ? super Integer>>()
+                {
+                    @Override
+                    public CacheEntryListener<? super String, ? super Integer> create()
+                    {
+                        return myCacheEntryListener;
+                    }
+                };
+            }
+
+            @Override
+            public boolean isOldValueRequired()
+            {
+                return false;
+            }
+
+            @Override
+            public Factory<CacheEntryEventFilter<? super String, ? super Integer>> getCacheEntryEventFilterFactory()
+            {
+                return new Factory<CacheEntryEventFilter<? super String, ? super Integer>>()
+                {
+                    @Override
+                    public CacheEntryEventFilter<? super String, ? super Integer> create()
+                    {
+                        return myCacheEntryEventFilter;
+                    }
+                };
+            }
+
+            @Override
+            public boolean isSynchronous()
+            {
+                return true;
+            }
+        };
+
+        MutableConfiguration<String, Integer> configuration2 = new MutableConfiguration<>(configuration);
+
+        configuration2.addCacheEntryListenerConfiguration(listener);
+
+        Cache<String, Integer> cache2 = cacheManager.createCache("cache2", configuration2);
+
+        cache2.put("entry", 100);
+        cache2.put("entry", 101);
+        cache2.remove("entry");
+
+        assertEquals(1, myCacheEntryListener.getUpdated());
+        assertEquals(1, myCacheEntryListener.getRemoved());
+
+        MutableConfiguration<String, Integer> configuration3 = new MutableConfiguration<>(configuration);
+
+        configuration3.addCacheEntryListenerConfiguration(listener);
+        configuration3.setExpiryPolicyFactory(ModifiedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, 1)));
+
+        Cache<String, Integer> cache3 = cacheManager.createCache("cache3", configuration3);
+
+        cache3.put("entry1", 101);
+        cache3.put("entry2", 102);
+        cache3.put("entry3", 103);
+
+        Thread.sleep(1000); // REVIEW: there's got to be a better way to test this use case?
+
+        cache3.unwrap(GuavaCache.class).cleanUp();
+
+        assertEquals(3, myCacheEntryListener.getExpired());
+    }
+
+    private static class MyCacheEntryListener
+        implements CacheEntryExpiredListener<String, Integer>,
+                   CacheEntryRemovedListener<String, Integer>,
+                   CacheEntryUpdatedListener<String, Integer>
+    {
+        int expired = 0;
+        int removed = 0;
+        int updated = 0;
+
+        public int getExpired()
+        {
+            return expired;
+        }
+
+        public int getRemoved()
+        {
+            return removed;
+        }
+
+        public int getUpdated()
+        {
+            return updated;
+        }
+
+        @Override
+        public void onExpired(Iterable<CacheEntryEvent<? extends String, ? extends Integer>> events)
+            throws CacheEntryListenerException
+        {
+            expired++;
+        }
+
+        @Override
+        public void onRemoved(Iterable<CacheEntryEvent<? extends String, ? extends Integer>> events)
+            throws CacheEntryListenerException
+        {
+            removed++;
+        }
+
+        @Override
+        public void onUpdated(Iterable<CacheEntryEvent<? extends String, ? extends Integer>> events)
+            throws CacheEntryListenerException
+        {
+            updated++;
+        }
+    }
+
+    private static class MyCacheEntryEventFilter
+        implements CacheEntryEventFilter<String, Integer>
+    {
+        @Override
+        public boolean evaluate(CacheEntryEvent<? extends String, ? extends Integer> event)
+            throws CacheEntryListenerException
+        {
+            switch (event.getEventType())
+            {
+                case EXPIRED:
+                    return true;
+
+                case REMOVED:
+                    return true;
+
+                case UPDATED:
+                    return true;
+            }
+
+            return false;
+        }
     }
 }

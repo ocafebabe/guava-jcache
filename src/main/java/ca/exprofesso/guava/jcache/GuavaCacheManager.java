@@ -201,7 +201,7 @@ public class GuavaCacheManager
     @Override
     public <T> T unwrap(Class<T> clazz)
     {
-        return (T) this;
+        return clazz.cast(this);
     }
 
     private void checkState()

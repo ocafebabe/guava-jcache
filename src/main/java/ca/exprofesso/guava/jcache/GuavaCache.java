@@ -16,6 +16,7 @@
 package ca.exprofesso.guava.jcache;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,14 @@ import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.event.CacheEntryCreatedListener;
+import javax.cache.event.CacheEntryEvent;
+import javax.cache.event.CacheEntryExpiredListener;
+import javax.cache.event.CacheEntryListener;
+import javax.cache.event.CacheEntryListenerException;
+import javax.cache.event.CacheEntryRemovedListener;
+import javax.cache.event.CacheEntryUpdatedListener;
+import javax.cache.event.EventType;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.expiry.ModifiedExpiryPolicy;
@@ -38,9 +47,12 @@ import javax.cache.processor.EntryProcessorResult;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheBuilderSpec;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
+import com.google.common.collect.Sets;
 
 public class GuavaCache<K, V>
-    implements javax.cache.Cache<K, V>
+    implements javax.cache.Cache<K, V>, RemovalListener<K, V>
 {
     private final String cacheName;
     private final CompleteConfiguration<K, V> configuration;
@@ -48,6 +60,8 @@ public class GuavaCache<K, V>
 
     private final Cache<K, V> cache;
     private final ConcurrentMap<K, V> view;
+
+    private final Set<CacheEntryListenerConfiguration<K, V>> cacheEntryListenerConfigurations;
 
     private boolean closed = false;
 
@@ -76,6 +90,13 @@ public class GuavaCache<K, V>
             Duration d = expiryPolicy.getExpiryForAccess();
 
             cacheBuilder.expireAfterAccess(d.getDurationAmount(), d.getTimeUnit());
+        }
+
+        this.cacheEntryListenerConfigurations = Sets.newHashSet(configuration.getCacheEntryListenerConfigurations());
+
+        if (!this.cacheEntryListenerConfigurations.isEmpty())
+        {
+            cacheBuilder = cacheBuilder.removalListener(this);
         }
 
         this.cache = (Cache<K, V>) cacheBuilder.build();
@@ -329,7 +350,7 @@ public class GuavaCache<K, V>
     @Override
     public <T> T unwrap(Class<T> clazz)
     {
-        return (T) this;
+        return clazz.cast(this);
     }
 
     @Override
@@ -370,12 +391,36 @@ public class GuavaCache<K, V>
                 @Override
                 public <T> T unwrap(Class<T> clazz)
                 {
-                    return (T) entry;
+                    return clazz.cast(entry);
                 }
             });
         }
 
-        return list.iterator();
+        return Collections.unmodifiableList(list).iterator();
+    }
+
+    @Override
+    public void onRemoval(RemovalNotification<K, V> notification)
+    {
+        switch (notification.getCause())
+        {
+            case EXPIRED:
+                notifyListeners(new GuavaCacheEntryEvent<>(this, EventType.EXPIRED, notification));
+                break;
+
+            case EXPLICIT:
+                notifyListeners(new GuavaCacheEntryEvent<>(this, EventType.REMOVED, notification));
+                break;
+
+            case REPLACED:
+                notifyListeners(new GuavaCacheEntryEvent<>(this, EventType.UPDATED, notification));
+                break;
+        }
+    }
+
+    public void cleanUp()
+    {
+        cache.cleanUp();
     }
 
     public long size()
@@ -388,6 +433,55 @@ public class GuavaCache<K, V>
         if (isClosed())
         {
             throw new IllegalStateException("This cache is closed!");
+        }
+    }
+
+    private void notifyListeners(CacheEntryEvent<K, V> event)
+    {
+        for (CacheEntryListenerConfiguration<K, V> listenerConfiguration : cacheEntryListenerConfigurations)
+        {
+            boolean invokeListener = true;
+
+            if (listenerConfiguration.getCacheEntryEventFilterFactory() != null)
+            {
+                invokeListener = listenerConfiguration.getCacheEntryEventFilterFactory().create().evaluate(event);
+            }
+
+            if (invokeListener)
+            {
+                CacheEntryListener<?, ?> cel = listenerConfiguration.getCacheEntryListenerFactory().create();
+
+                switch (event.getEventType())
+                {
+                    case CREATED:
+                        if (cel instanceof CacheEntryCreatedListener)
+                        {
+                            throw new CacheEntryListenerException("Not supported!");
+                        }
+                        break;
+
+                    case EXPIRED:
+                        if (cel instanceof CacheEntryExpiredListener)
+                        {
+                            ((CacheEntryExpiredListener) cel).onExpired(Sets.newHashSet(event));
+                        }
+                        break;
+
+                    case REMOVED:
+                        if (cel instanceof CacheEntryRemovedListener)
+                        {
+                            ((CacheEntryRemovedListener) cel).onRemoved(Sets.newHashSet(event));
+                        }
+                        break;
+
+                    case UPDATED:
+                        if (cel instanceof CacheEntryUpdatedListener)
+                        {
+                            ((CacheEntryUpdatedListener) cel).onUpdated(Sets.newHashSet(event));
+                        }
+                        break;
+                }
+            }
         }
     }
 }
