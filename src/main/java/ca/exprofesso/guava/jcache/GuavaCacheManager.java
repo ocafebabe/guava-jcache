@@ -16,6 +16,7 @@
 package ca.exprofesso.guava.jcache;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -143,7 +144,7 @@ public class GuavaCacheManager
     {
         checkState();
 
-        return caches.keySet();
+        return Collections.unmodifiableSet(caches.keySet());
     }
 
     @Override
