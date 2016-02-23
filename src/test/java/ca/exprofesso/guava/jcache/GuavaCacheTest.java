@@ -40,6 +40,8 @@ import javax.cache.event.CacheEntryRemovedListener;
 import javax.cache.event.CacheEntryUpdatedListener;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.ModifiedExpiryPolicy;
+import javax.cache.integration.CacheLoader;
+import javax.cache.integration.CacheLoaderException;
 import javax.cache.spi.CachingProvider;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -282,6 +284,65 @@ public class GuavaCacheTest
         cache.close();
 
         cache.get("test");
+    }
+
+    @Test
+    public void testCacheLoader()
+    {
+        final CacheLoader<String, Integer> cacheLoader = new CacheLoader<String, Integer>()
+        {
+            @Override
+            public Integer load(String key)
+                throws CacheLoaderException
+            {
+                return Integer.valueOf(key);
+            }
+
+            @Override
+            public Map<String, Integer> loadAll(Iterable<? extends String> keys)
+                throws CacheLoaderException
+            {
+                Map<String, Integer> map = new HashMap<>();
+
+                for (String key : keys)
+                {
+                    map.put(key, Integer.valueOf(key));
+                }
+
+                return map;
+            }
+        };
+
+        MutableConfiguration<String, Integer> custom = new MutableConfiguration<>(configuration);
+
+        custom.setReadThrough(true);
+        custom.setCacheLoaderFactory(new Factory<CacheLoader<String, Integer>>()
+        {
+            @Override
+            public CacheLoader<String, Integer> create()
+            {
+                return cacheLoader;
+            }
+        });
+
+        Cache<String, Integer> loadingCache = cacheManager.createCache("loadingCache", custom);
+
+        assertEquals(Integer.valueOf(1), loadingCache.get("1"));
+        assertEquals(Integer.valueOf(2), loadingCache.get("2"));
+        assertEquals(Integer.valueOf(3), loadingCache.get("3"));
+
+        Set<String> keys = new HashSet<>();
+
+        keys.add("4");
+        keys.add("5");
+        keys.add("6");
+
+        Map<String, Integer> map = loadingCache.getAll(keys);
+
+        assertEquals(3, map.size());
+        assertEquals(Integer.valueOf(4), map.get("4"));
+        assertEquals(Integer.valueOf(5), map.get("5"));
+        assertEquals(Integer.valueOf(6), map.get("6"));
     }
 
     @Test

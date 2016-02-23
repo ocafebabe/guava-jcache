@@ -23,12 +23,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.configuration.CacheEntryListenerConfiguration;
 import javax.cache.configuration.CompleteConfiguration;
 import javax.cache.configuration.Configuration;
+import javax.cache.configuration.Factory;
 import javax.cache.event.CacheEntryCreatedListener;
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryExpiredListener;
@@ -41,6 +43,7 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.expiry.TouchedExpiryPolicy;
+import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CompletionListener;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
@@ -53,6 +56,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.cache.CacheStats;
+import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.Sets;
@@ -135,7 +139,16 @@ public class GuavaCache<K, V>
             cacheBuilder.recordStats();
         }
 
-        this.cache = (Cache<K, V>) cacheBuilder.build();
+        if (configuration.isReadThrough())
+        {
+            Factory<CacheLoader<K, V>> factory = configuration.getCacheLoaderFactory();
+
+            this.cache = (Cache<K, V>) cacheBuilder.build(new GuavaCacheLoader<>(factory.create()));
+        }
+        else
+        {
+            this.cache = (Cache<K, V>) cacheBuilder.build();
+        }
 
         this.view = cache.asMap();
     }
@@ -150,6 +163,18 @@ public class GuavaCache<K, V>
             throw new NullPointerException();
         }
 
+        if (configuration.isReadThrough())
+        {
+            try
+            {
+                return ((LoadingCache<K, V>) cache).get(key);
+            }
+            catch (ExecutionException e)
+            {
+                throw new CacheException(e);
+            }
+        }
+
         return cache.getIfPresent(key);
     }
 
@@ -161,6 +186,18 @@ public class GuavaCache<K, V>
         if (keys == null)
         {
             throw new NullPointerException();
+        }
+
+        if (configuration.isReadThrough())
+        {
+            try
+            {
+                return ((LoadingCache<K, V>) cache).getAll(keys);
+            }
+            catch (ExecutionException e)
+            {
+                throw new CacheException(e);
+            }
         }
 
         return cache.getAllPresent(keys);
