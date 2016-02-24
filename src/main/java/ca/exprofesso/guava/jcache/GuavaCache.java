@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
@@ -75,7 +76,7 @@ public class GuavaCache<K, V>
 
     private final Set<CacheEntryListenerConfiguration<K, V>> cacheEntryListenerConfigurations;
 
-    private boolean closed = false;
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     public GuavaCache(String cacheName, CompleteConfiguration<K, V> configuration, CacheManager cacheManager)
     {
@@ -454,13 +455,13 @@ public class GuavaCache<K, V>
         cache.invalidateAll();
         cache.cleanUp();
 
-        closed = true;
+        closed.set(true);
     }
 
     @Override
     public boolean isClosed()
     {
-        return closed;
+        return closed.get();
     }
 
     @Override

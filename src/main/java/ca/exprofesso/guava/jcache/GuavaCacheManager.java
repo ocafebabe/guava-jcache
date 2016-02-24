@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -41,7 +42,9 @@ public class GuavaCacheManager
 
     private final ConcurrentMap<String, Cache<?, ?>> caches = new ConcurrentHashMap<>();
 
-    private boolean closed = false;
+    private final AtomicBoolean closed = new AtomicBoolean();
+
+    private final Object lock = new Object();
 
     public GuavaCacheManager(URI uri, ClassLoader classLoader, Properties properties, CachingProvider cachingProvider)
     {
@@ -85,10 +88,6 @@ public class GuavaCacheManager
         {
             throw new NullPointerException();
         }
-        else if (caches.containsKey(cacheName))
-        {
-            throw new CacheException("This cache already exists!");
-        }
         else if (!(configuration instanceof CompleteConfiguration))
         {
             throw new IllegalArgumentException("Invalid configuration implementation!");
@@ -98,16 +97,19 @@ public class GuavaCacheManager
 
         validateConfiguration(completeConfiguration);
 
-        Cache<K, V> newCache = new GuavaCache<>(cacheName, completeConfiguration, this);
-
-        Cache<K, V> oldCache = (Cache<K, V>) caches.putIfAbsent(cacheName, newCache);
-
-        if (oldCache != null)
+        synchronized (lock)
         {
-            return oldCache;
-        }
+            if (caches.containsKey(cacheName))
+            {
+                throw new CacheException("This cache already exists!");
+            }
 
-        return newCache;
+            Cache<K, V> cache = new GuavaCache<>(cacheName, completeConfiguration, this);
+
+            caches.put(cacheName, cache);
+
+            return cache;
+        }
     }
 
     @Override
@@ -189,13 +191,13 @@ public class GuavaCacheManager
 
         caches.clear();
 
-        closed = true;
+        closed.set(true);
     }
 
     @Override
     public boolean isClosed()
     {
-        return closed;
+        return closed.get();
     }
 
     @Override
