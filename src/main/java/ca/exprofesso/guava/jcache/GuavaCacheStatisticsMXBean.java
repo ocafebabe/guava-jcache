@@ -96,7 +96,7 @@ public class GuavaCacheStatisticsMXBean
     @Override
     public float getAverageGetTime()
     {
-        return (float) cache.unwrap(GuavaCache.class).stats().minus(snapshot).averageLoadPenalty();
+        return (float) (cache.unwrap(GuavaCache.class).stats().minus(snapshot).averageLoadPenalty() / 1000);
     }
 
     @Override
