@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
@@ -42,6 +43,7 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
+import javax.cache.integration.CompletionListener;
 import javax.cache.spi.CachingProvider;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -316,14 +318,17 @@ public class GuavaCacheTest
         MutableConfiguration<String, Integer> custom = new MutableConfiguration<>(configuration);
 
         custom.setReadThrough(true);
-        custom.setCacheLoaderFactory(new Factory<CacheLoader<String, Integer>>()
-        {
-            @Override
-            public CacheLoader<String, Integer> create()
+        custom.setCacheLoaderFactory
+        (
+            new Factory<CacheLoader<String, Integer>>()
             {
-                return cacheLoader;
+                @Override
+                public CacheLoader<String, Integer> create()
+                {
+                    return cacheLoader;
+                }
             }
-        });
+        );
 
         Cache<String, Integer> loadingCache = cacheManager.createCache("loadingCache", custom);
 
@@ -343,6 +348,79 @@ public class GuavaCacheTest
         assertEquals(Integer.valueOf(4), map.get("4"));
         assertEquals(Integer.valueOf(5), map.get("5"));
         assertEquals(Integer.valueOf(6), map.get("6"));
+    }
+
+    @Test(timeout = 5000L)
+    public void testCacheLoaderAsyncLoadAll()
+        throws InterruptedException
+    {
+        final CacheLoader<String, Integer> cacheLoader = new CacheLoader<String, Integer>()
+        {
+            @Override
+            public Integer load(String key)
+                throws CacheLoaderException
+            {
+                return Integer.valueOf(key);
+            }
+
+            @Override
+            public Map<String, Integer> loadAll(Iterable<? extends String> keys)
+                throws CacheLoaderException
+            {
+                throw new UnsupportedOperationException("Not supported yet.");
+            }
+        };
+
+        final AtomicBoolean completed = new AtomicBoolean(false);
+
+        final CompletionListener completionListener = new CompletionListener()
+        {
+            @Override
+            public void onCompletion()
+            {
+                completed.set(true);
+            }
+
+            @Override
+            public void onException(Exception e)
+            {
+                System.err.println(e);
+            }
+        };
+
+        MutableConfiguration<String, Integer> custom = new MutableConfiguration<>(configuration);
+
+        custom.setReadThrough(true);
+        custom.setCacheLoaderFactory
+        (
+            new Factory<CacheLoader<String, Integer>>()
+            {
+                @Override
+                public CacheLoader<String, Integer> create()
+                {
+                    return cacheLoader;
+                }
+            }
+        );
+
+        Cache<String, Integer> loadingCache = cacheManager.createCache("loadingCache", custom);
+
+        Set<String> keys = new HashSet<>();
+
+        keys.add("1");
+        keys.add("2");
+        keys.add("3");
+
+        loadingCache.loadAll(keys, true, completionListener);
+
+        while (!completed.get())
+        {
+            Thread.sleep(250);
+        }
+
+        assertTrue(loadingCache.remove("1"));
+        assertTrue(loadingCache.remove("2"));
+        assertTrue(loadingCache.remove("3"));
     }
 
     @Test
@@ -439,7 +517,7 @@ public class GuavaCacheTest
         assertEquals("cache miss percentage", 0F, cacheMissPercentage);
     }
 
-    @Test
+    @Test(timeout = 5000L)
     public void testCacheEntryListener()
         throws InterruptedException
     {
@@ -512,11 +590,12 @@ public class GuavaCacheTest
         cache3.put("entry2", 102);
         cache3.put("entry3", 103);
 
-        Thread.sleep(1000); // REVIEW: there's got to be a better way to test this use case?
+        while (myCacheEntryListener.getExpired() != 3)
+        {
+            Thread.sleep(250);
 
-        cache3.unwrap(GuavaCache.class).cleanUp();
-
-        assertEquals(3, myCacheEntryListener.getExpired());
+            cache3.unwrap(GuavaCache.class).cleanUp();
+        }
     }
 
     private static class MyCacheEntryListener

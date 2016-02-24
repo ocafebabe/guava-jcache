@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
@@ -217,9 +219,50 @@ public class GuavaCache<K, V>
     }
 
     @Override
-    public void loadAll(Set<? extends K> keys, boolean replaceExistingValues, CompletionListener completionListener)
+    public void loadAll(final Set<? extends K> keys, final boolean replaceExistingValues, final CompletionListener cl)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        checkState();
+
+        if (keys == null || cl == null)
+        {
+            throw new NullPointerException();
+        }
+
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+        executorService.submit
+        (
+            new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    try
+                    {
+                        if (cache instanceof LoadingCache)
+                        {
+                            LoadingCache<K, V> loadingCache = (LoadingCache<K, V>) cache;
+
+                            for (K key : keys)
+                            {
+                                if (!view.containsKey(key) || replaceExistingValues)
+                                {
+                                    loadingCache.get(key);
+                                }
+                            }
+                        }
+                    }
+                    catch (ExecutionException e)
+                    {
+                        cl.onException(e);
+                    }
+                    finally
+                    {
+                        cl.onCompletion();
+                    }
+                }
+            }
+        );
     }
 
     @Override
