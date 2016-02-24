@@ -246,9 +246,13 @@ public class GuavaCache<K, V>
 
                             for (K key : keys)
                             {
-                                if (!view.containsKey(key) || replaceExistingValues)
+                                if (!view.containsKey(key))
                                 {
                                     loadingCache.get(key);
+                                }
+                                else if (replaceExistingValues)
+                                {
+                                    loadingCache.refresh(key);
                                 }
                             }
                         }

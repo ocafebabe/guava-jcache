@@ -19,12 +19,12 @@ import static org.junit.Assert.*;
 
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
@@ -51,6 +51,8 @@ import javax.management.ObjectName;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.Sets;
 
 public class GuavaCacheTest
 {
@@ -238,10 +240,7 @@ public class GuavaCacheTest
         cache.put("2", 2);
         cache.put("3", 3);
 
-        Set<String> keys = new HashSet<>();
-
-        keys.add("1");
-        keys.add("3");
+        Set<String> keys = Sets.newHashSet("1", "3");
 
         cache.removeAll(keys);
 
@@ -336,11 +335,7 @@ public class GuavaCacheTest
         assertEquals(Integer.valueOf(2), loadingCache.get("2"));
         assertEquals(Integer.valueOf(3), loadingCache.get("3"));
 
-        Set<String> keys = new HashSet<>();
-
-        keys.add("4");
-        keys.add("5");
-        keys.add("6");
+        Set<String> keys = Sets.newHashSet("4", "5", "6");
 
         Map<String, Integer> map = loadingCache.getAll(keys);
 
@@ -354,12 +349,16 @@ public class GuavaCacheTest
     public void testCacheLoaderAsyncLoadAll()
         throws InterruptedException
     {
+        final AtomicInteger loads = new AtomicInteger();
+
         final CacheLoader<String, Integer> cacheLoader = new CacheLoader<String, Integer>()
         {
             @Override
             public Integer load(String key)
                 throws CacheLoaderException
             {
+                loads.incrementAndGet();
+
                 return Integer.valueOf(key);
             }
 
@@ -405,11 +404,22 @@ public class GuavaCacheTest
 
         Cache<String, Integer> loadingCache = cacheManager.createCache("loadingCache", custom);
 
-        Set<String> keys = new HashSet<>();
+        loadingCache.put("1", 1);
+        loadingCache.put("2", 2);
+        loadingCache.put("3", 3);
 
-        keys.add("1");
-        keys.add("2");
-        keys.add("3");
+        Set<String> keys = Sets.newHashSet("1", "2", "3", "4", "5", "6");
+
+        loadingCache.loadAll(keys, false, completionListener);
+
+        while (!completed.get())
+        {
+            Thread.sleep(250);
+        }
+
+        assertEquals(3, loads.getAndSet(0));
+
+        completed.set(false);
 
         loadingCache.loadAll(keys, true, completionListener);
 
@@ -418,9 +428,13 @@ public class GuavaCacheTest
             Thread.sleep(250);
         }
 
-        assertTrue(loadingCache.remove("1"));
-        assertTrue(loadingCache.remove("2"));
-        assertTrue(loadingCache.remove("3"));
+        assertEquals(6, loads.get());
+        assertEquals(Integer.valueOf(1), loadingCache.getAndRemove("1"));
+        assertEquals(Integer.valueOf(2), loadingCache.getAndRemove("2"));
+        assertEquals(Integer.valueOf(3), loadingCache.getAndRemove("3"));
+        assertEquals(Integer.valueOf(4), loadingCache.getAndRemove("4"));
+        assertEquals(Integer.valueOf(5), loadingCache.getAndRemove("5"));
+        assertEquals(Integer.valueOf(6), loadingCache.getAndRemove("6"));
     }
 
     @Test
