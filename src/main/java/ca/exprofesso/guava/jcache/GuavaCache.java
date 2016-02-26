@@ -18,6 +18,7 @@ package ca.exprofesso.guava.jcache;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -429,14 +430,44 @@ public class GuavaCache<K, V>
     public <T> T invoke(K key, EntryProcessor<K, V, T> entryProcessor, Object... arguments)
         throws EntryProcessorException
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        checkState();
+
+        if (key == null || entryProcessor == null)
+        {
+            throw new NullPointerException();
+        }
+
+        V value = get(key);
+
+        GuavaMutableEntry<K, V> entry = new GuavaMutableEntry<>(key, value);
+
+        T t = entryProcessor.process(entry, arguments);
+
+        if (entry.isUpdated())
+        {
+            replace(key, entry.getValue());
+        }
+
+        if (entry.isRemoved())
+        {
+            remove(key);
+        }
+
+        return t;
     }
 
     @Override
     public <T> Map<K, EntryProcessorResult<T>>
         invokeAll(Set<? extends K> keys, EntryProcessor<K, V, T> entryProcessor, Object... arguments)
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        Map<K, EntryProcessorResult<T>> results = new HashMap<>();
+
+        for (K key : keys)
+        {
+            results.put(key, new GuavaEntryProcessorResult<>(invoke(key, entryProcessor, arguments)));
+        }
+
+        return results;
     }
 
     @Override

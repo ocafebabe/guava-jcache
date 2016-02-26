@@ -44,6 +44,9 @@ import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CompletionListener;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
 import javax.cache.spi.CachingProvider;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -435,6 +438,134 @@ public class GuavaCacheTest
         assertEquals(Integer.valueOf(4), loadingCache.getAndRemove("4"));
         assertEquals(Integer.valueOf(5), loadingCache.getAndRemove("5"));
         assertEquals(Integer.valueOf(6), loadingCache.getAndRemove("6"));
+    }
+
+    @Test
+    public void testInvoke()
+    {
+        final CacheLoader<String, Integer> cacheLoader = new CacheLoader<String, Integer>()
+        {
+            @Override
+            public Integer load(String key)
+                throws CacheLoaderException
+            {
+                return Integer.valueOf(key);
+            }
+
+            @Override
+            public Map<String, Integer> loadAll(Iterable<? extends String> keys)
+                throws CacheLoaderException
+            {
+                throw new UnsupportedOperationException("Not supported yet.");
+            }
+        };
+
+        final EntryProcessor<String, Integer, Boolean> entryProcessor = new EntryProcessor<String, Integer, Boolean>()
+        {
+            @Override
+            public Boolean process(MutableEntry<String, Integer> entry, Object... arguments)
+                throws EntryProcessorException
+            {
+                assertTrue(entry.exists());
+                assertEquals(Integer.valueOf(1), entry.getValue());
+                entry.setValue(2);
+                assertEquals(Integer.valueOf(2), entry.getValue());
+                entry.remove();
+                assertFalse(entry.exists());
+
+                return Boolean.TRUE;
+            }
+        };
+
+        MutableConfiguration<String, Integer> custom = new MutableConfiguration<>(configuration);
+
+        custom.setReadThrough(true);
+        custom.setCacheLoaderFactory
+        (
+            new Factory<CacheLoader<String, Integer>>()
+            {
+                @Override
+                public CacheLoader<String, Integer> create()
+                {
+                    return cacheLoader;
+                }
+            }
+        );
+
+        Cache<String, Integer> invokingCache = cacheManager.createCache("invokingCache", custom);
+
+        assertTrue(invokingCache.invoke("1", entryProcessor));
+        assertFalse(invokingCache.containsKey("1"));
+    }
+
+    @Test
+    public void testInvokeAll()
+    {
+        final CacheLoader<String, Integer> cacheLoader = new CacheLoader<String, Integer>()
+        {
+            @Override
+            public Integer load(String key)
+                throws CacheLoaderException
+            {
+                return Integer.valueOf(key);
+            }
+
+            @Override
+            public Map<String, Integer> loadAll(Iterable<? extends String> keys)
+                throws CacheLoaderException
+            {
+                throw new UnsupportedOperationException("Not supported yet.");
+            }
+        };
+
+        final EntryProcessor<String, Integer, Void> entryProcessor1 = new EntryProcessor<String, Integer, Void>()
+        {
+            @Override
+            public Void process(MutableEntry<String, Integer> entry, Object... arguments)
+                throws EntryProcessorException
+            {
+                assertTrue(entry.exists());
+                assertEquals(Integer.valueOf(1), entry.getValue());
+                entry.setValue(2);
+                assertEquals(Integer.valueOf(2), entry.getValue());
+
+                return null;
+            }
+        };
+
+        final EntryProcessor<String, Integer, Void> entryProcessor2 = new EntryProcessor<String, Integer, Void>()
+        {
+            @Override
+            public Void process(MutableEntry<String, Integer> entry, Object... arguments)
+                throws EntryProcessorException
+            {
+                entry.remove();
+
+                return null;
+            }
+        };
+
+        MutableConfiguration<String, Integer> custom = new MutableConfiguration<>(configuration);
+
+        custom.setReadThrough(true);
+        custom.setCacheLoaderFactory
+        (
+            new Factory<CacheLoader<String, Integer>>()
+            {
+                @Override
+                public CacheLoader<String, Integer> create()
+                {
+                    return cacheLoader;
+                }
+            }
+        );
+
+        Cache<String, Integer> invokingCache = cacheManager.createCache("invokingCache", custom);
+
+        assertNull(invokingCache.invoke("1", entryProcessor1));
+        assertEquals(Integer.valueOf(2), invokingCache.get("1"));
+        assertNull(invokingCache.invoke("1", entryProcessor2));
+        assertFalse(invokingCache.containsKey("1"));
     }
 
     @Test
