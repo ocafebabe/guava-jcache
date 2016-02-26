@@ -19,11 +19,15 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses(
-{
+@Suite.SuiteClasses
+({
     GuavaCachingProviderTest.class,
     GuavaCacheManagerTest.class,
     GuavaCacheTest.class,
+    GuavaCacheEventTest.class,
+    GuavaCacheLoaderTest.class,
+    GuavaCacheMXBeanTest.class,
+    GuavaCacheStatisticsMXBeanTest.class,
     GuavaCacheConcurrentTest.class
 })
 public class TestSuite
