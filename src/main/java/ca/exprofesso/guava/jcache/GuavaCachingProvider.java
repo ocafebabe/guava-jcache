@@ -15,13 +15,11 @@
  */
 package ca.exprofesso.guava.jcache;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -52,7 +50,7 @@ public final class GuavaCachingProvider
             {
                 uri = url.toURI();
 
-                try (InputStream is = new FileInputStream(Paths.get(uri).toFile()))
+                try (InputStream is = url.openStream())
                 {
                     properties.load(is);
                 }
@@ -235,7 +233,7 @@ public final class GuavaCachingProvider
             {
                 return false;
             }
-            
+
             if (!Objects.equals(this.middle, other.middle))
             {
                 return false;
