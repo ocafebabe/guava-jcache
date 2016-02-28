@@ -154,6 +154,11 @@ public class GuavaCacheManager
     {
         checkState();
 
+        if (cacheName == null)
+        {
+            throw new NullPointerException();
+        }
+        
         Cache<?, ?> cache = caches.remove(cacheName);
 
         if (cache != null)
