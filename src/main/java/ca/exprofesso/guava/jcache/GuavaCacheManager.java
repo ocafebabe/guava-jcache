@@ -158,7 +158,7 @@ public class GuavaCacheManager
         {
             throw new NullPointerException();
         }
-        
+
         Cache<?, ?> cache = caches.remove(cacheName);
 
         if (cache != null)
@@ -212,6 +212,11 @@ public class GuavaCacheManager
     public <T> T unwrap(Class<T> clazz)
     {
         return clazz.cast(this);
+    }
+
+    protected void close(Cache<?, ?> cache)
+    {
+        caches.remove(cache.getName());
     }
 
     private void checkState()

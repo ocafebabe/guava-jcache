@@ -485,12 +485,12 @@ public class GuavaCache<K, V>
     @Override
     public void close()
     {
-        checkState();
-
         if (closed.compareAndSet(false, true))
         {
             cache.invalidateAll();
             cache.cleanUp();
+
+            ((GuavaCacheManager) cacheManager).close(this);
         }
     }
 

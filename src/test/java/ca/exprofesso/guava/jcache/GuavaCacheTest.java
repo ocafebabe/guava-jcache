@@ -72,6 +72,8 @@ public class GuavaCacheTest
     @After
     public void close()
     {
+        cacheManager.destroyCache(cache.getName());
+
         cachingProvider.close();
 
         assertTrue(cacheManager.isClosed());
