@@ -212,6 +212,11 @@ public class GuavaCacheManager
     @Override
     public <T> T unwrap(Class<T> clazz)
     {
+        if (!clazz.isAssignableFrom(getClass()))
+        {
+            throw new IllegalArgumentException();
+        }
+
         return clazz.cast(this);
     }
 

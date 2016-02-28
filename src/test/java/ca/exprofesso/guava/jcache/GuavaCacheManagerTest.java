@@ -416,4 +416,14 @@ public class GuavaCacheManagerTest
             assertTrue(collection2.contains(element));
         }
     }
+
+    @Test(expected = IllegalArgumentException.class) // org.jsr107.tck.CacheManagerTest.unwrapThrowsInvalidArgument
+    public void unwrapThrowsInvalidArgument()
+    {
+        final Class ALWAYS_INVALID_UNWRAP_CLASS = Exception.class;
+
+        cachingProvider.getCacheManager().unwrap(Exception.class);
+
+        fail();
+    }
 }
