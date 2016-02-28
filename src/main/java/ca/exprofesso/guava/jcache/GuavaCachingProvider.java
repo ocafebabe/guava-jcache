@@ -69,8 +69,7 @@ public final class GuavaCachingProvider
         defaultProperties = properties;
     }
 
-    private final
-        ConcurrentMap<Triple<URI, ClassLoader, Properties>, CacheManager> cacheManagers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Pair<URI, ClassLoader>, CacheManager> cacheManagers = new ConcurrentHashMap<>();
 
     public GuavaCachingProvider()
     {
@@ -81,12 +80,11 @@ public final class GuavaCachingProvider
     {
         URI _uri = (uri != null) ? uri : getDefaultURI();
         ClassLoader _classLoader = (classLoader != null) ? classLoader : getDefaultClassLoader();
-        Properties _properties = (properties != null) ? properties : getDefaultProperties();
+        Properties _properties = (properties != null) ? properties : new Properties();
 
         CacheManager newCacheManager = new GuavaCacheManager(_uri, _classLoader, _properties, this);
 
-        CacheManager oldCacheManager =
-            cacheManagers.putIfAbsent(new Triple<>(_uri, _classLoader, _properties), newCacheManager);
+        CacheManager oldCacheManager = cacheManagers.putIfAbsent(new Pair<>(_uri, _classLoader), newCacheManager);
 
         if (oldCacheManager != null)
         {
@@ -117,7 +115,7 @@ public final class GuavaCachingProvider
     @Override
     public CacheManager getCacheManager(URI uri, ClassLoader classLoader)
     {
-        return getCacheManager(uri, classLoader, getDefaultProperties());
+        return getCacheManager(uri, classLoader, null);
     }
 
     @Override
@@ -129,11 +127,11 @@ public final class GuavaCachingProvider
     @Override
     public void close()
     {
-        Iterator<Map.Entry<Triple<URI, ClassLoader, Properties>, CacheManager>> i = cacheManagers.entrySet().iterator();
+        Iterator<Map.Entry<Pair<URI, ClassLoader>, CacheManager>> i = cacheManagers.entrySet().iterator();
 
         while (i.hasNext())
         {
-            Map.Entry<Triple<URI, ClassLoader, Properties>, CacheManager> entry = i.next();
+            Map.Entry<Pair<URI, ClassLoader>, CacheManager> entry = i.next();
 
             CacheManager cm = entry.getValue();
 
@@ -155,7 +153,7 @@ public final class GuavaCachingProvider
     @Override
     public void close(URI uri, ClassLoader classLoader)
     {
-        CacheManager cm = cacheManagers.remove(new Triple<>(uri, classLoader, getDefaultProperties()));
+        CacheManager cm = cacheManagers.remove(new Pair<>(uri, classLoader));
 
         if (cm != null && !cm.isClosed())
         {
@@ -169,32 +167,25 @@ public final class GuavaCachingProvider
         return optionalFeature.equals(OptionalFeature.STORE_BY_REFERENCE);
     }
 
-    protected void close(CacheManager cm)
+    protected void close(CacheManager cacheManager)
     {
-        cacheManagers.remove(new Triple<>(cm.getURI(), cm.getClassLoader(), cm.getProperties()));
+        cacheManagers.remove(new Pair<>(cacheManager.getURI(), cacheManager.getClassLoader()));
     }
 
-    private static class Triple<L, M, R>
+    private static class Pair<L, R>
     {
         private final L left;
-        private final M middle;
         private final R right;
 
-        public Triple(L left, M middle, R right)
+        public Pair(L left, R right)
         {
             this.left = left;
-            this.middle = middle;
             this.right = right;
         }
 
         public L getLeft()
         {
             return left;
-        }
-
-        public M getMiddle()
-        {
-            return middle;
         }
 
         public R getRight()
@@ -205,11 +196,10 @@ public final class GuavaCachingProvider
         @Override
         public int hashCode()
         {
-            int hash = 7;
+            int hash = 3;
 
-            hash = 71 * hash + Objects.hashCode(this.left);
-            hash = 71 * hash + Objects.hashCode(this.middle);
-            hash = 71 * hash + Objects.hashCode(this.right);
+            hash = 61 * hash + Objects.hashCode(this.left);
+            hash = 61 * hash + Objects.hashCode(this.right);
 
             return hash;
         }
@@ -232,14 +222,9 @@ public final class GuavaCachingProvider
                 return false;
             }
 
-            final Triple<?, ?, ?> other = (Triple<?, ?, ?>) obj;
+            final Pair<?, ?> other = (Pair<?, ?>) obj;
 
             if (!Objects.equals(this.left, other.left))
-            {
-                return false;
-            }
-
-            if (!Objects.equals(this.middle, other.middle))
             {
                 return false;
             }

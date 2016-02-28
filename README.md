@@ -3,8 +3,9 @@ guava-jcache
 
 This WIP shall be a full implementation of the API and SPI from JSR-107 (aka JCache). It provides a wrapper around a Google Guava cache that allows allows you to use Guava as the caching provider using only JSR-107 APIs.
 
-[![License](http://img.shields.io/:license-apache-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 [![Build Status](https://travis-ci.org/ocafebabe/guava-jcache.svg)](https://travis-ci.org/ocafebabe/guava-jcache)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/ca.exprofesso/guava-jcache/badge.svg)](https://maven-badges.herokuapp.com/maven-central/ca.exprofesso/guava-jcache/)
+[![License](http://img.shields.io/:license-apache-brightgreen.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 ## Usage
 
@@ -23,7 +24,7 @@ Development snapshots are available on Sonatype Nexus repository
     <dependency>
         <groupId>ca.exprofesso</groupId>
         <artifactId>guava-jcache</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.2-SNAPSHOT</version>
     </dependency>
 </dependencies>
 ```

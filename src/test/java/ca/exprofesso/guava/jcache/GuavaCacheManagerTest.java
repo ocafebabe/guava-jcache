@@ -106,7 +106,8 @@ public class GuavaCacheManagerTest
         assertNotNull(cacheManager1);
         assertNotNull(cacheManager2);
 
-        assertNotEquals(cacheManager1, cacheManager2);
+        // properties do not form part of the identity of the CacheManager
+        assertEquals(cacheManager1, cacheManager2);
 
         cacheManager1.close();
         cacheManager2.close();
@@ -307,8 +308,8 @@ public class GuavaCacheManagerTest
         assertEquals(TouchedExpiryPolicy.factoryOf(Duration.ONE_MINUTE), actualConfiguration.getExpiryPolicyFactory());
     }
 
-    @Test
-    public void testReuseCacheManager() // org.jsr107.tck.CacheManagerTest.testReuseCacheManager
+    @Test // org.jsr107.tck.CacheManagerTest.testReuseCacheManager
+    public void testReuseCacheManager()
         throws Exception
     {
         CachingProvider provider = Caching.getCachingProvider();
@@ -333,5 +334,18 @@ public class GuavaCacheManagerTest
         assertFalse(otherCacheManager.isClosed());
 
         assertNotSame(cacheManager, otherCacheManager);
+    }
+
+    @Test // org.jsr107.tck.CacheManagerTest.getCacheManager_nonNullProperties
+    public void getCacheManagerWithNonNullProperties()
+    {
+        CachingProvider provider = Caching.getCachingProvider();
+        Properties properties = new Properties();
+
+        assertSame(provider.getCacheManager(),
+        provider.getCacheManager(provider.getDefaultURI(), provider.getDefaultClassLoader(), new Properties()));
+
+        CacheManager manager = provider.getCacheManager();
+        assertEquals(properties, manager.getProperties());
     }
 }

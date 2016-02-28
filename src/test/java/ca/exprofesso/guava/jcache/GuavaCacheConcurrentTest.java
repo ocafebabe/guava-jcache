@@ -116,7 +116,7 @@ public class GuavaCacheConcurrentTest
 
         for (int i = 0; i < THREADS; i++)
         {
-            workers.add(new Worker(properties));
+            workers.add(new Worker());
         }
 
         Set<ValueObject> uniques = new HashSet<>();
@@ -156,20 +156,13 @@ public class GuavaCacheConcurrentTest
     private static class Worker
         implements Callable<Collection<ValueObject>>
     {
-        private final Properties properties;
-
-        public Worker(Properties properties)
-        {
-            this.properties = properties;
-        }
-
         @Override
         public Collection<ValueObject> call()
             throws Exception
         {
             CachingProvider cachingProvider = Caching.getCachingProvider(GuavaCachingProvider.class.getName());
 
-            CacheManager cacheManager = cachingProvider.getCacheManager(null, null, properties);
+            CacheManager cacheManager = cachingProvider.getCacheManager();
 
             Cache<KeyObject, ValueObject> cache =
                 cacheManager.getCache("workerCache", KeyObject.class, ValueObject.class);
