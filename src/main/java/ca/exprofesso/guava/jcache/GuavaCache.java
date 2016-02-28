@@ -187,7 +187,7 @@ public class GuavaCache<K, V>
     {
         checkState();
 
-        if (keys == null)
+        if (keys == null || keys.contains(null))
         {
             throw new NullPointerException();
         }
@@ -302,7 +302,7 @@ public class GuavaCache<K, V>
     {
         checkState();
 
-        if (map == null)
+        if (map == null || map.containsKey(null) || map.containsValue(null))
         {
             throw new NullPointerException();
         }
@@ -341,7 +341,7 @@ public class GuavaCache<K, V>
     {
         checkState();
 
-        if (key == null)
+        if (key == null || oldValue == null)
         {
             throw new NullPointerException();
         }
@@ -353,6 +353,11 @@ public class GuavaCache<K, V>
     public V getAndRemove(K key)
     {
         checkState();
+
+        if (key == null)
+        {
+            throw new NullPointerException();
+        }
 
         return view.remove(key);
     }
@@ -400,6 +405,11 @@ public class GuavaCache<K, V>
     public void removeAll(Set<? extends K> keys)
     {
         checkState();
+
+        if (keys == null || keys.contains(null))
+        {
+            throw new NullPointerException();
+        }
 
         cache.invalidateAll(keys);
     }

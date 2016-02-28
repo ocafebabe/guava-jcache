@@ -16,7 +16,6 @@
 package ca.exprofesso.guava.jcache;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -31,6 +30,8 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.expiry.TouchedExpiryPolicy;
 import javax.cache.spi.CachingProvider;
+
+import com.google.common.collect.ImmutableSet;
 
 public class GuavaCacheManager
     implements javax.cache.CacheManager
@@ -146,7 +147,7 @@ public class GuavaCacheManager
     {
         checkState();
 
-        return Collections.unmodifiableSet(caches.keySet());
+        return ImmutableSet.copyOf(caches.keySet());
     }
 
     @Override

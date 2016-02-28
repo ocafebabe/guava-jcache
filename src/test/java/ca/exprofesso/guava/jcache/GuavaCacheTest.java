@@ -19,6 +19,7 @@ import static org.junit.Assert.*;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -401,5 +402,94 @@ public class GuavaCacheTest
         assertEquals(Integer.valueOf(2), invokingCache.get("1"));
         assertNull(invokingCache.invoke("1", entryProcessor2));
         assertFalse(invokingCache.containsKey("1"));
+    }
+
+    @Test // org.jsr107.tck.GetTest.getAll_NullKey
+    public void getAllWithNullKey()
+    {
+        Set<String> keys = Sets.newHashSet("1", null, "2");
+
+        try
+        {
+            cache.getAll(keys);
+            fail("should have thrown an exception - null key in keys not allowed");
+        }
+        catch (NullPointerException e)
+        {
+            //expected
+        }
+    }
+
+    @Test // org.jsr107.tck.RemoveTest.getAndRemove_NullKey
+    public void getAndRemoveWithNullKey()
+    {
+        try
+        {
+            assertNull(cache.getAndRemove(null));
+            fail("should have thrown an exception - null key not allowed");
+        }
+        catch (NullPointerException e)
+        {
+            //expected
+        }
+    }
+
+    @Test // org.jsr107.tck.RemoveTest.removeAll_1arg_NullKey
+    public void removeAllWithNullKey()
+    {
+        Set<String> keys = Sets.newHashSet((String) null);
+
+        try
+        {
+            cache.removeAll(keys);
+            fail("should have thrown an exception - null key not allowed");
+        }
+        catch (NullPointerException e)
+        {
+            //expected
+        }
+    }
+
+    @Test // org.jsr107.tck.RemoveTest.remove_2arg_NullValue
+    public void removeWithNullValue()
+    {
+        try
+        {
+            cache.remove("1", null);
+            fail("should have thrown an exception - null value");
+        }
+        catch (NullPointerException e)
+        {
+            //good
+        }
+    }
+
+    @Test // org.jsr107.tck.PutTest.remove_2arg_NullValue
+    public void putAllWithNullKey()
+    {
+        Map<String, Integer> data = new LinkedHashMap<>();
+
+        data.put("1", 1);
+        data.put("2", 2);
+        data.put("3", 3);
+        data.put(null, Integer.MIN_VALUE);
+
+        try
+        {
+            cache.putAll(data);
+            fail("should have thrown an exception - null key not allowed");
+        }
+        catch (NullPointerException e)
+        {
+            //expected
+        }
+        
+        for (Map.Entry<String, Integer> entry : data.entrySet())
+        {
+            if (entry.getKey() != null)
+            {
+                assertNull(cache.get(entry.getKey()));
+            }
+        }
     }
 }

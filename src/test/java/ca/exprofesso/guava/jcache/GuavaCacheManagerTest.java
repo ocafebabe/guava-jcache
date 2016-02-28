@@ -18,6 +18,7 @@ package ca.exprofesso.guava.jcache;
 import static org.junit.Assert.*;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Properties;
 
 import javax.cache.Cache;
@@ -347,5 +348,72 @@ public class GuavaCacheManagerTest
 
         CacheManager manager = provider.getCacheManager();
         assertEquals(properties, manager.getProperties());
+    }
+
+    @Test // org.jsr107.tck.CacheManagerTest.getCaches_MutateCacheManager
+    public void getCachesAndMutateCacheManager()
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        MutableConfiguration configuration = new MutableConfiguration();
+        configuration.setStoreByValue(false);
+
+        String removeName = "c2";
+        ArrayList<String> cacheNames1 = new ArrayList<>();
+        cacheManager.createCache("c1", configuration);
+        Cache c1 = cacheManager.getCache("c1");
+        cacheNames1.add(c1.getName());
+        cacheManager.createCache(removeName, configuration);
+        cacheManager.createCache("c3", configuration);
+        Cache c3 = cacheManager.getCache("c3");
+        cacheNames1.add(c3.getName());
+
+        Iterable<String> cacheNames;
+        int size;
+
+        cacheNames = cacheManager.getCacheNames();
+        size = 0;
+
+        for (String cacheName : cacheNames)
+        {
+            size++;
+        }
+
+        assertEquals(3, size);
+
+        cacheManager.destroyCache(removeName);
+        size = 0;
+
+        for (String cacheName : cacheNames)
+        {
+            size++;
+        }
+
+        assertEquals(3, size);
+
+        cacheNames = cacheManager.getCacheNames();
+        size = 0;
+
+        for (String cacheName : cacheNames)
+        {
+            size++;
+        }
+
+        assertEquals(2, size);
+
+        ArrayList<String> collection2 = new ArrayList<>();
+
+        for (String element : cacheNames)
+        {
+            assertTrue(cacheNames1.contains(element));
+            collection2.add(element);
+        }
+
+        assertEquals(cacheNames1.size(), collection2.size());
+
+        for (String element : cacheNames1)
+        {
+            assertTrue(collection2.contains(element));
+        }
     }
 }
