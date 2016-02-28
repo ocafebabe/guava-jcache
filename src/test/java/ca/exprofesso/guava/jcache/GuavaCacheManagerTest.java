@@ -17,6 +17,7 @@ package ca.exprofesso.guava.jcache;
 
 import static org.junit.Assert.*;
 
+import java.net.URI;
 import java.util.Properties;
 
 import javax.cache.Cache;
@@ -304,5 +305,33 @@ public class GuavaCacheManagerTest
             (CompleteConfiguration) cache.getConfiguration(CompleteConfiguration.class);
 
         assertEquals(TouchedExpiryPolicy.factoryOf(Duration.ONE_MINUTE), actualConfiguration.getExpiryPolicyFactory());
+    }
+
+    @Test
+    public void testReuseCacheManager() // org.jsr107.tck.CacheManagerTest.testReuseCacheManager
+        throws Exception
+    {
+        CachingProvider provider = Caching.getCachingProvider();
+        URI uri = provider.getDefaultURI();
+
+        CacheManager cacheManager = provider.getCacheManager(uri, provider.getDefaultClassLoader());
+        assertFalse(cacheManager.isClosed());
+        cacheManager.close();
+        assertTrue(cacheManager.isClosed());
+
+        try
+        {
+            cacheManager.createCache("Dog", null);
+            fail();
+        }
+        catch (IllegalStateException e)
+        {
+            //expected
+        }
+
+        CacheManager otherCacheManager = provider.getCacheManager(uri, provider.getDefaultClassLoader());
+        assertFalse(otherCacheManager.isClosed());
+
+        assertNotSame(cacheManager, otherCacheManager);
     }
 }

@@ -177,21 +177,24 @@ public class GuavaCacheManager
     @Override
     public void close()
     {
-        for (Cache<?, ?> c : caches.values())
+        if (closed.compareAndSet(false, true))
         {
-            try
+            for (Cache<?, ?> c : caches.values())
             {
-                c.close();
+                try
+                {
+                    c.close();
+                }
+                catch (Exception e)
+                {
+                    // no-op
+                }
             }
-            catch (Exception e)
-            {
-                // no-op
-            }
+
+            caches.clear();
+
+            ((GuavaCachingProvider) cachingProvider).close(this);
         }
-
-        caches.clear();
-
-        closed.set(true);
     }
 
     @Override

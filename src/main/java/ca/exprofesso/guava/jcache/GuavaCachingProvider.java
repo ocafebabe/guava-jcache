@@ -169,6 +169,11 @@ public final class GuavaCachingProvider
         return optionalFeature.equals(OptionalFeature.STORE_BY_REFERENCE);
     }
 
+    protected void close(CacheManager cm)
+    {
+        cacheManagers.remove(new Triple<>(cm.getURI(), cm.getClassLoader(), cm.getProperties()));
+    }
+
     private static class Triple<L, M, R>
     {
         private final L left;

@@ -487,10 +487,11 @@ public class GuavaCache<K, V>
     {
         checkState();
 
-        cache.invalidateAll();
-        cache.cleanUp();
-
-        closed.set(true);
+        if (closed.compareAndSet(false, true))
+        {
+            cache.invalidateAll();
+            cache.cleanUp();
+        }
     }
 
     @Override
