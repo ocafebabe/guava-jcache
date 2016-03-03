@@ -9,7 +9,7 @@ This WIP shall be a full implementation of the API and SPI from JSR-107 (aka JCa
 
 ## Usage
 
-Development snapshots are available on Sonatype Nexus repository 
+Development snapshots are available on Sonatype Nexus repository
 
 ```xml
 <repositories>
@@ -24,7 +24,7 @@ Development snapshots are available on Sonatype Nexus repository
     <dependency>
         <groupId>ca.exprofesso</groupId>
         <artifactId>guava-jcache</artifactId>
-        <version>1.0.2-SNAPSHOT</version>
+        <version>1.0.3-SNAPSHOT</version>
     </dependency>
 </dependencies>
 ```
@@ -54,7 +54,7 @@ final CacheLoader<String, Integer> cacheLoader = new CacheLoader<String, Integer
         throws CacheLoaderException
     {
         // in a real application the value would probably come from a database...
-        return Integer.valueOf(key); 
+        return Integer.valueOf(key);
     }
 
     @Override
