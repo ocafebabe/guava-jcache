@@ -24,7 +24,7 @@ Development snapshots are available on Sonatype Nexus repository
     <dependency>
         <groupId>ca.exprofesso</groupId>
         <artifactId>guava-jcache</artifactId>
-        <version>1.0.3-SNAPSHOT</version>
+        <version>1.0.4-SNAPSHOT</version>
     </dependency>
 </dependencies>
 ```
