@@ -121,7 +121,7 @@ public final class GuavaCachingProvider
     @Override
     public CacheManager getCacheManager()
     {
-        return getCacheManager(getDefaultURI(), getDefaultClassLoader());
+        return getCacheManager(getDefaultURI(), getDefaultClassLoader(), getDefaultProperties());
     }
 
     @Override

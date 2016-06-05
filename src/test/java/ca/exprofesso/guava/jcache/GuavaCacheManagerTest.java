@@ -36,6 +36,7 @@ import javax.cache.spi.CachingProvider;
 import org.bitstrings.test.junit.runner.ClassLoaderPerTestRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -115,6 +116,38 @@ public class GuavaCacheManagerTest
 
         assertTrue(cacheManager1.isClosed());
         assertTrue(cacheManager2.isClosed());
+    }
+
+    @Test
+    public void testCacheManagerWithDefaultProperties()
+        throws Exception
+    {
+        CacheManager cacheManager = cachingProvider.getCacheManager();
+
+        assertNotNull(cacheManager);
+
+        MutableConfiguration<Long, String> configuration =
+            new MutableConfiguration<Long, String>().setStoreByValue(false);
+
+        Cache<Long, String> cache = cacheManager.createCache("maximumSizeCacheTest", configuration);
+
+        long maximumSize = Long.valueOf(cacheManager.getProperties().getProperty("maximumSize"));
+
+        assertNotEquals(0, maximumSize);
+
+        for (long l = 1; l <= (maximumSize * 10); l++)
+        {
+            cache.put(l, "VALUE-" + l);
+
+            if ((l % maximumSize) == 0)
+            {
+                assertTrue(cache.unwrap(GuavaCache.class).size() <= maximumSize);
+            }
+        }
+
+        assertTrue(cache.unwrap(GuavaCache.class).size() <= maximumSize);
+
+        cacheManager.close();
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -338,6 +371,7 @@ public class GuavaCacheManagerTest
     }
 
     @Test // org.jsr107.tck.CacheManagerTest.getCacheManager_nonNullProperties
+    @Ignore // see https://github.com/jsr107/jsr107tck/issues/102
     public void getCacheManagerWithNonNullProperties()
     {
         CachingProvider provider = Caching.getCachingProvider();
