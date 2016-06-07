@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 import javax.cache.Cache;
+import javax.cache.CacheException;
 import javax.cache.CacheManager;
 import javax.cache.Caching;
 import javax.cache.configuration.CompleteConfiguration;
@@ -371,16 +372,28 @@ public class GuavaCacheManagerTest
     }
 
     @Test // org.jsr107.tck.CacheManagerTest.getCacheManager_nonNullProperties
-    @Ignore // see https://github.com/jsr107/jsr107tck/issues/102
     public void getCacheManagerWithNonNullProperties()
     {
+        // see https://github.com/jsr107/jsr107tck/issues/102
+
+        // make sure existing cache managers are closed and the non empty properties get picked up
+        try
+        {
+            Caching.getCachingProvider().close();
+        }
+        catch (CacheException ignore)
+        {
+            // ignore exception which may happen if the provider is not active
+        }
+
         CachingProvider provider = Caching.getCachingProvider();
+
         Properties properties = new Properties();
+        properties.put("dummy.com", "goofy");
 
-        assertSame(provider.getCacheManager(),
-        provider.getCacheManager(provider.getDefaultURI(), provider.getDefaultClassLoader(), new Properties()));
-
+        provider.getCacheManager(provider.getDefaultURI(), provider.getDefaultClassLoader(), properties);
         CacheManager manager = provider.getCacheManager();
+
         assertEquals(properties, manager.getProperties());
     }
 
