@@ -501,6 +501,34 @@ public class GuavaCache<K, V>
             cache.cleanUp();
 
             ((GuavaCacheManager) cacheManager).close(this);
+
+            if (configuration.isManagementEnabled())
+            {
+                String name = GuavaCacheMXBean.getObjectName(this);
+
+                try
+                {
+                    ManagementFactory.getPlatformMBeanServer().unregisterMBean(new ObjectName(name));
+                }
+                catch (OperationsException | MBeanException e)
+                {
+                    throw new CacheException(e);
+                }
+            }
+
+            if (configuration.isStatisticsEnabled())
+            {
+                String name = GuavaCacheStatisticsMXBean.getObjectName(this);
+
+                try
+                {
+                    ManagementFactory.getPlatformMBeanServer().unregisterMBean(new ObjectName(name));
+                }
+                catch (OperationsException | MBeanException e)
+                {
+                    throw new CacheException(e);
+                }
+            }
         }
     }
 

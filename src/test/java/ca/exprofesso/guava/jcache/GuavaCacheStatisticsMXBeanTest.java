@@ -27,11 +27,19 @@ import javax.cache.spi.CachingProvider;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import org.junit.Rule;
 import org.junit.Test;
+
+import ca.exprofesso.guava.jcache.rules.Repeat;
+import ca.exprofesso.guava.jcache.rules.RepeatRule;
 
 public class GuavaCacheStatisticsMXBeanTest
 {
+    @Rule
+    public RepeatRule rule = new RepeatRule();
+
     @Test
+    @Repeat(times = 2)
     public void testCacheStatisticsBean()
         throws Exception
     {
