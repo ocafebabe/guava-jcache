@@ -64,6 +64,8 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.Sets;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.cache.integration.CacheWriter;
 
 public class GuavaCache<K, V>
     implements javax.cache.Cache<K, V>, RemovalListener<K, V>
@@ -447,23 +449,30 @@ public class GuavaCache<K, V>
             throw new NullPointerException();
         }
 
-        V value = get(key);
-
-        GuavaMutableEntry<K, V> entry = new GuavaMutableEntry<>(key, value);
-
-        T t = entryProcessor.process(entry, arguments);
-
-        if (entry.isUpdated())
-        {
-            replace(key, entry.getValue());
-        }
-
-        if (entry.isRemoved())
-        {
-            remove(key);
-        }
-
-        return t;
+        AtomicReference<T> res = new AtomicReference<>();
+        view.compute(key, (k, v) -> {
+          if (configuration.isReadThrough()) {
+            v = configuration.getCacheLoaderFactory().create().load(k);
+          }
+          GuavaMutableEntry<K, V> entry = new GuavaMutableEntry<>(key, v);
+          T t = entryProcessor.process(entry, arguments);
+          res.set(t);
+          if (entry.isRemoved()) {
+            if (configuration.isWriteThrough()) {
+              configuration.getCacheWriterFactory().create().delete(key);
+            }
+            return null;
+          } else if (entry.isUpdated()) {
+            final V value = entry.getValue();
+            if (configuration.isWriteThrough()) {
+              configuration.getCacheWriterFactory().create().write(entry);
+            }
+            return value;
+          } else {
+            return v;
+          }
+        });
+        return res.get();
     }
 
     @Override

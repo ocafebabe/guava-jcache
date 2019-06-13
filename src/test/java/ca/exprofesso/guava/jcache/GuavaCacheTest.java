@@ -40,6 +40,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Sets;
+import org.junit.Assert;
 
 public class GuavaCacheTest
 {
@@ -335,6 +336,30 @@ public class GuavaCacheTest
     }
 
     @Test
+    public void testFixBug_5() {
+        final EntryProcessor<String, Integer, Boolean> entryProcessor = new EntryProcessor<String, Integer, Boolean>()
+        {
+            @Override
+            public Boolean process(MutableEntry<String, Integer> entry, Object... arguments)
+                throws EntryProcessorException
+            {
+                if (!entry.exists()) {
+                  entry.setValue(Integer.parseInt(entry.getKey()));
+                  return Boolean.TRUE;
+                }
+                return Boolean.FALSE;
+            }
+        };
+        MutableConfiguration<String, Integer> custom = new MutableConfiguration<>(configuration);
+        Cache<String, Integer> cache = cacheManager.createCache("invokingCache", custom);
+        Assert.assertTrue(cache.invoke("1", entryProcessor));
+        Assert.assertEquals(1, cache.get("1").intValue());
+        Assert.assertFalse(cache.invoke("1", entryProcessor));
+        Assert.assertEquals(1, cache.get("1").intValue());
+    }
+
+
+    @Test
     public void testInvokeAll()
     {
         final CacheLoader<String, Integer> cacheLoader = new CacheLoader<String, Integer>()
@@ -360,7 +385,7 @@ public class GuavaCacheTest
             public Void process(MutableEntry<String, Integer> entry, Object... arguments)
                 throws EntryProcessorException
             {
-                assertTrue(entry.exists());
+                assertTrue("Value: " + entry.getValue(), entry.exists());
                 assertEquals(Integer.valueOf(1), entry.getValue());
                 entry.setValue(2);
                 assertEquals(Integer.valueOf(2), entry.getValue());
@@ -483,7 +508,7 @@ public class GuavaCacheTest
         {
             //expected
         }
-        
+
         for (Map.Entry<String, Integer> entry : data.entrySet())
         {
             if (entry.getKey() != null)
