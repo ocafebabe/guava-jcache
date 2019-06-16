@@ -279,59 +279,49 @@ public class GuavaCacheTest
     @Test
     public void testInvoke()
     {
-        final CacheLoader<String, Integer> cacheLoader = new CacheLoader<String, Integer>()
-        {
-            @Override
-            public Integer load(String key)
-                throws CacheLoaderException
-            {
-                return Integer.valueOf(key);
-            }
-
-            @Override
-            public Map<String, Integer> loadAll(Iterable<? extends String> keys)
-                throws CacheLoaderException
-            {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-        };
-
         final EntryProcessor<String, Integer, Boolean> entryProcessor = new EntryProcessor<String, Integer, Boolean>()
         {
             @Override
             public Boolean process(MutableEntry<String, Integer> entry, Object... arguments)
                 throws EntryProcessorException
             {
-                assertTrue(entry.exists());
-                assertEquals(Integer.valueOf(1), entry.getValue());
-                entry.setValue(2);
-                assertEquals(Integer.valueOf(2), entry.getValue());
-                entry.remove();
-                assertFalse(entry.exists());
+                return entry.exists();
+            }
+        };
 
-                return Boolean.TRUE;
+        final EntryProcessor<String, Integer, Boolean> entryProcessor2 = new EntryProcessor<String, Integer, Boolean>()
+        {
+            @Override
+            public Boolean process(MutableEntry<String, Integer> entry, Object... arguments)
+                throws EntryProcessorException
+            {
+                entry.setValue(2);
+
+                return entry.exists();
+            }
+        };
+
+        final EntryProcessor<String, Integer, Boolean> entryProcessor3 = new EntryProcessor<String, Integer, Boolean>()
+        {
+            @Override
+            public Boolean process(MutableEntry<String, Integer> entry, Object... arguments)
+                throws EntryProcessorException
+            {
+                entry.setValue(3);
+
+                return entry.exists();
             }
         };
 
         MutableConfiguration<String, Integer> custom = new MutableConfiguration<>(configuration);
 
-        custom.setReadThrough(true);
-        custom.setCacheLoaderFactory
-        (
-            new Factory<CacheLoader<String, Integer>>()
-            {
-                @Override
-                public CacheLoader<String, Integer> create()
-                {
-                    return cacheLoader;
-                }
-            }
-        );
-
         Cache<String, Integer> invokingCache = cacheManager.createCache("invokingCache", custom);
 
-        assertTrue(invokingCache.invoke("1", entryProcessor));
-        assertFalse(invokingCache.containsKey("1"));
+        assertFalse(invokingCache.invoke("1", entryProcessor));
+        assertTrue(invokingCache.invoke("1", entryProcessor2));
+        assertEquals(Integer.valueOf(2), invokingCache.get("1"));
+        assertTrue(invokingCache.invoke("1", entryProcessor3));
+        assertEquals(Integer.valueOf(3), invokingCache.get("1"));
     }
 
     @Test
@@ -483,7 +473,7 @@ public class GuavaCacheTest
         {
             //expected
         }
-        
+
         for (Map.Entry<String, Integer> entry : data.entrySet())
         {
             if (entry.getKey() != null)

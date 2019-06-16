@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2016 ExProfesso.
  *
@@ -18,38 +19,41 @@ package ca.exprofesso.guava.jcache;
 public class GuavaMutableEntry<K, V>
     implements javax.cache.processor.MutableEntry<K, V>
 {
-    private final K key;
-    private final V oldValue;
+    private volatile K key;
+    private volatile V value;
+    private volatile boolean exists;
 
-    private volatile V newValue;
     private volatile boolean removed;
     private volatile boolean updated;
 
-    public GuavaMutableEntry(K key, V oldValue)
+    public GuavaMutableEntry(K key, V value, boolean exists)
     {
         this.key = key;
-        this.oldValue = oldValue;
-        this.newValue = oldValue;
+        this.value = value;
+        this.exists = exists;
     }
 
     @Override
     public boolean exists()
     {
-        return !removed && ((oldValue != null) || (newValue != null));
+        return exists;
     }
 
     @Override
     public void remove()
     {
+        exists = false;
         removed = true;
     }
 
     @Override
     public void setValue(V value)
     {
-        newValue = value;
+        this.value = value;
 
+        exists = true;
         updated = true;
+        removed = false;
     }
 
     @Override
@@ -61,12 +65,7 @@ public class GuavaMutableEntry<K, V>
     @Override
     public V getValue()
     {
-        if (newValue != oldValue)
-        {
-            return newValue;
-        }
-
-        return oldValue;
+        return value;
     }
 
     @Override

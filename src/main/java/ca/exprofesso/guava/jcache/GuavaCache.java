@@ -449,13 +449,13 @@ public class GuavaCache<K, V>
 
         V value = get(key);
 
-        GuavaMutableEntry<K, V> entry = new GuavaMutableEntry<>(key, value);
+        GuavaMutableEntry<K, V> entry = new GuavaMutableEntry<>(key, value, containsKey(key));
 
         T t = entryProcessor.process(entry, arguments);
 
         if (entry.isUpdated())
         {
-            replace(key, entry.getValue());
+            put(key, entry.getValue());
         }
 
         if (entry.isRemoved())
