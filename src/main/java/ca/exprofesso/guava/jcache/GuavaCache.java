@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.cache.CacheException;
 import javax.cache.CacheManager;
@@ -78,6 +79,8 @@ public class GuavaCache<K, V>
     private final Set<CacheEntryListenerConfiguration<K, V>> cacheEntryListenerConfigurations;
 
     private final AtomicBoolean closed = new AtomicBoolean();
+
+    private final ReentrantLock entryProcessorLock = new ReentrantLock(true);
 
     public GuavaCache(String cacheName, CompleteConfiguration<K, V> configuration, CacheManager cacheManager)
     {
@@ -447,23 +450,30 @@ public class GuavaCache<K, V>
             throw new NullPointerException();
         }
 
-        V value = get(key);
+        entryProcessorLock.lock();
 
-        GuavaMutableEntry<K, V> entry = new GuavaMutableEntry<>(key, value, containsKey(key));
-
-        T t = entryProcessor.process(entry, arguments);
-
-        if (entry.isUpdated())
+        try
         {
-            put(key, entry.getValue());
-        }
+            GuavaMutableEntry<K, V> entry = new GuavaMutableEntry<>(key, get(key), containsKey(key));
 
-        if (entry.isRemoved())
+            T t = entryProcessor.process(entry, arguments);
+
+            if (entry.isUpdated())
+            {
+                put(key, entry.getValue());
+            }
+
+            if (entry.isRemoved())
+            {
+                remove(key);
+            }
+
+            return t;
+        }
+        finally
         {
-            remove(key);
+            entryProcessorLock.unlock();
         }
-
-        return t;
     }
 
     @Override

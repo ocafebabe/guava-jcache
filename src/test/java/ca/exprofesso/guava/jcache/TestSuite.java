@@ -28,7 +28,8 @@ import org.junit.runners.Suite;
     GuavaCacheLoaderTest.class,
     GuavaCacheMXBeanTest.class,
     GuavaCacheStatisticsMXBeanTest.class,
-    GuavaCacheConcurrentTest.class
+    GuavaCacheConcurrentTest.class,
+    GuavaCacheAtomicEntryProcessorTest.class
 })
 public class TestSuite
 {
