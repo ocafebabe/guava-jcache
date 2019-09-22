@@ -98,4 +98,4 @@ Integer value = cache.get("key");
 
 [javax.cache (JSR107 API and SPI 1.0.0 API)](http://ignite.apache.org/jcache/1.0.0/javadoc/javax/cache/package-summary.html)
 
-[com.google.common.cache (Guava: Google Core Libraries for Java 22.0 API)](http://google.github.io/guava/releases/22.0/api/docs/com/google/common/cache/package-summary.html)
+[com.google.common.cache (Guava: Google Core Libraries for Java 28.1-jre API)](http://google.github.io/guava/releases/28.1-jre/api/docs/com/google/common/cache/package-summary.html)
